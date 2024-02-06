@@ -3,19 +3,19 @@
 #include <string.h>
 #include <stdlib.h>
 int buf_counter = 0;
-// #include "spi.h"
+// #include "serial.h"
 #include "periph.h"
 #include "constant.h"
 
 // Initial configuartion setting and code sourced from: https://exploreembedded.com/wiki/8051_Family_C_Library
 
 /*-------------------------------------------------------------------------------
-                         void spi_init()
+                         void serial_init()
 ----------------------------------------------------------------------------------
  * Arguments: none
  * Return: none
  
- * description: This function is used to initialize the spi in shift register mode with a baud rate of SYSclk/12
+ * description: This function is used to initialize the serial in shift register mode with a baud rate of SYSclk/12
 
     1.  8-Bit Shift Register MODE0. Data bits are transmitted/received LSB
                     RxD is used for data i/o, TxD is used for clock
@@ -24,16 +24,16 @@ int buf_counter = 0;
     3.      SCON is configured in MODE0 ie. 8bit Data 1-Start and 1-Stop bit
     4.      Finally the timer is turned ON by setting TR1 bit to generate the baud rate
 ----------------------------------------------------------------------------------*/
-void spi_init(void)
+void serial_init(void)
 {
     // SCON = SCON & 0x0F; 
     SCON = 0x50;    // serial mode 3 8 bit data 1 start and 1 stop bit
     TMOD = 0x20;    // timer 1 mode 2 and timer 2 mode 0 ---> mode 2 is 16bit timer/counter auto reload and thx/tlx are cascaded
     TH1 = 0xfd;     // Load value for 9600 baud --> UART Mode 3 means baud is determined by timer 1's overflow rate 
-    REN = 1;        // serial port initialization
-    EA = 1;			// enable interrupts
-	ES = 1;			// enable serial port interrupts
-    TR1 = 1;        // Turn ON timer 1
+    REN = HIGH;        // serial port initialization
+    EA = HIGH;			// enable interrupts
+	ES = HIGH;			// enable serial port interrupts
+    TR1 = HIGH;        // Turn ON timer 1
 
 }
 
@@ -51,17 +51,17 @@ void spi_init(void)
 //     return(chr);
 // }
 
-void spi_txchar(char ch)
+void serial_txchar(char ch)
 {
     SBUF=ch;       // Load the data to be transmitted
     while(TI==0);    // Wait till the data is trasmitted
         TI=0;         //Clear the flag for next cycle.
 }
 
-void spi_txstring(char *string_ptr)
+void serial_txstring(char *string_ptr)
  {
           while(*string_ptr)
-           spi_txchar(*string_ptr++);
+           serial_txchar(*string_ptr++);
 }
 
 unsigned char RX_data(void)
@@ -70,123 +70,122 @@ unsigned char RX_data(void)
     while(RI == 0);
     RI = 0;
     a = SBUF;
-    spi_txchar(a);
+    serial_txchar(a);
     return a;
 }
 
 
 // OP Write Instruction
 void wiz_write(uint16_t addr, uint8_t data) {
+    CS = LOW;
     uint8_t command = OP_WRITE;
     // send op code
     for (uint8_t i = 0; i < 8; i++) {
         if (command & MSK_8) {
-            MOSI = 1;
+            MOSI = HIGH;
         }
         else {
             MOSI = 0;
         }
-        CLK = 1;
+        CLK = HIGH;
         command = command << 1;
-        CLK = 0;
+        CLK = LOW;
     }
 
     // send address field
     for (uint8_t i = 0; i < 16; i++) {
         if (addr & MSK_16) {
-            MOSI = 1;
+            MOSI = HIGH;
         }
         else {
-            MOSI = 0;
+            MOSI = LOW;
         }
-        CLK = 1;
+        CLK = HIGH;
         addr = addr << 1;
-        CLK = 0;
+        CLK = LOW;
     }
 
     // send data
     for (uint8_t i = 0; i < 8; i++) {
         if (data & MSK_8) {
-            MOSI = 1;
+            MOSI = HIGH;
         }
         else {
-            MOSI = 0;
+            MOSI = LOW;
         }
-        data = 1;
-        command = command << 1;
-        data = 0;
+        CLK = HIGH;
+        data = data << 1;
+        CLK = LOW;
     }
 
+    CS = HIGH;
 }
 
 // OP Read Instruction
-void wiz_read(uint16_t addr, uint8_t data) {
+uint8_t wiz_read(uint16_t addr) {
+    CS = LOW;
     uint8_t command = OP_READ;
+    uint8_t byte = 0; // hold output data
     // send op code
     for (uint8_t i = 0; i < 8; i++) {
         if (command & MSK_8) {
-            MOSI = 1;
+            MOSI = HIGH;
         }
         else {
-            MOSI = 0;
+            MOSI = LOW;
         }
-        CLK = 1;
+        CLK = HIGH;
         command = command << 1;
-        CLK = 0;
+        CLK = LOW;
     }
 
     // send address field
     for (uint8_t i = 0; i < 16; i++) {
         if (addr & MSK_16) {
-            MOSI = 1;
+            MOSI = HIGH;
         }
         else {
-            MOSI = 0;
+            MOSI = LOW;
         }
-        CLK = 1;
+        CLK = HIGH;
         addr = addr << 1;
-        CLK = 0;
+        CLK = LOW;
     }
 
-    // send data
+    // shift in data
     for (uint8_t i = 0; i < 8; i++) {
-        if (data & MSK_8) {
-            MOSI = 1;
-        }
-        else {
-            MOSI = 0;
-        }
-        data = 1;
-        command = command << 1;
-        data = 0;
+        byte = byte << 1; // create room for new bit
+        CLK = HIGH;
+        byte = byte | MISO; // shift in MSB
+        CLK = LOW;
     }
 
+    CS = HIGH;
+    return byte;
 }
 
-// sends byte instructions
-void cmdout(unsigned char cmd) 
-{
-    for (unsigned char i = 0; i < 8; i++) {
-        if (cmd & MSK) {
-            SDA = 1;
-        }
-        else {
-            SDA = 0;
-        }
-        delay(10);
-        SCL = 1;
-        cmd = cmd << 1;  // clock data into sda
-        SCL = 0;
-    }
+void wiz_init(void) {
+    // TODO: config mode register
+    // TODO: config interrupt mask register
+    // TODO: config retry time-value register
+    // TODO: config retry count register
 }
-
 
 void main(void)
 {
+    CLK = LOW; 
+    // // serial_transmit();
+    // // serial_init();
 
-    // spi_transmit();
-    spi_init();
+    wiz_write(SOCKET_0, 0x02); // set to UDP with no multicast
+    wiz_write(SOCKET_1, 0x01); // set to TCP with ack on internal timeout
+    wiz_read(SOCKET_0);
+    wiz_read(SOCKET_1);
+    CLK = LOW;
+    // serial_txchar(read);
 	while (1) {
-        RX_data();
+    // RX_data();
+
+
     }
 }
