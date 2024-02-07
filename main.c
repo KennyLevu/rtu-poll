@@ -114,10 +114,11 @@ uint8_t wiz_read(uint16_t addr)
     uint8_t byte = 0; // hold output data
     cmdout_8(OP_READ);
     cmdout_16(addr);
-
+    delay_us(2);
     // shift in data
     for (uint8_t i = 0; i < 8; i++) {
         CLK = HIGH;
+        delay_us(2);
         byte = byte | MISO; // shift in MSB
         CLK = LOW;
         byte = byte << 1; // create room for new bit
@@ -139,16 +140,40 @@ void wiz_set_gateway(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
 // prints gateway address to serial
 void wiz_get_gateway(void)
 {
-    uint8_t gateway[7] = {0,'.',0,'.',0,'.',0};
-    gateway[0] = wiz_read(GATEWAY_1); // returns first portion of address
-    gateway[2] = wiz_read(GATEWAY_2);
-    gateway[4] = wiz_read(GATEWAY_3);
-    gateway[6] = wiz_read(GATEWAY_4);
+    char gateway[8] = {'z','.','z','.','z','.','z','\0'};
+    gateway[0] = (char)wiz_read(GATEWAY_1); // returns first portion of address
+    gateway[2] = (char)wiz_read(GATEWAY_2);
+    gateway[4] = (char)wiz_read(GATEWAY_3);
+    gateway[6] = (char)wiz_read(GATEWAY_4);
     // serial_txchar(gateway);
-    serial_txstring(gateway);
-    serial_txstring("test");
+    // serial_txstring(gateway);
+    // serial_txchar((char)gateway[0]);
+    //     serial_txchar('\n');
+    // serial_txchar((char)0xdc);
+    //     serial_txchar('\n');
+    // serial_txchar((char)wiz_read(GATEWAY_2));
+    //     serial_txchar('\n');
+    // serial_txchar((char)gateway[2]);
+    //     serial_txchar('\n');
+
+    // serial_txchar((char)gateway[4]);
+    //     serial_txchar('\n');
+    // serial_txchar((char)gateway[6]);
+    // serial_txchar('\n');
+    // serial_txstring("test");
 }
 
+// prints ip addr to serial
+void wiz_get_ip(void)
+{
+    char ipaddr[8] = {'z','.','z','.','z','.','z','\0'};
+    ipaddr[0] = (char)wiz_read(IP_1); // returns first portion of address
+    ipaddr[2] = (char)wiz_read(IP_2);
+    ipaddr[4] = (char)wiz_read(IP_3);
+    ipaddr[6] = (char)wiz_read(IP_4);
+    // serial_txstring(ipaddr);
+
+}
 // set subnet address a.b.c.d
 void wiz_set_subnet(uint8_t a, uint8_t b, uint8_t c, uint8_t d) 
 {
@@ -202,6 +227,9 @@ void wiz_init(void)
     // TODO: config interrupt mask register
     // TODO: config retry time-value register
     // TODO: config retry count register
+
+    wiz_set_gateway(126,10,220,254);   // 126.10.220.254 <---gateway address // 7e.a.dc.fe
+  
     /* Init Sockets 1 and 2 for UDP and TCP*/
     wiz_write(SOCKET_0, 0x02); // set socket 0 to UDP with no multicast
     wiz_write(SOCKET_1, 0x01); // set socket 1 to TCP with ack on internal timeout
@@ -211,17 +239,13 @@ void wiz_init(void)
     // wiz_read(SOCKET_0); // debug confirm socket
     // wiz_read(SOCKET_1); // debug confirm socket
     
-    wiz_set_gateway(126,10,220,254);   // 126.10.220.254 <---gateway address // 7e.a.dc.fe
+    // wiz_set_gateway(126,10,220,254);   // 126.10.220.254 <---gateway address // 7e.a.dc.fe
     wiz_set_subnet(255,255,192,0);    // 255.255.192.0 <--- subnet mask // ff.ff.c0.0
-    wiz_set_ip(126,10,200,0);     // 126.10.218.163 <--- my pc // 126.10.218.163 <--- set mcu
-    wiz_set_mac(0x00, 0x08, 0xdc, 0x24, 0x4b, 0x7e);
-    
-
-    // wiz_read(GATEWAY_1); // debug get gateway
-    // wiz_read(GATEWAY_2);
-    // wiz_read(GATEWAY_3);
-    // wiz_read(GATEWAY_4);
+    wiz_set_mac(0x00, 0x08, 0xdc, 0x24, 0x4b, 0x7e); // mac address read as hex
+    wiz_set_ip(126,10,200,0);     // 126.10.218.163 <--- my pc // 126.10.218.163 7e.a.c8.0<--- set mcu
     wiz_get_gateway();
+    wiz_get_ip();
+
 }
 
 
@@ -229,7 +253,7 @@ void main(void)
 {
     CLK = LOW; // set clock idle state
     delay_us(1000);
-    serial_init();
+    // serial_init();
     wiz_init();
 	while (1) {
     // RX_data();
