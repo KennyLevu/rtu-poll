@@ -127,7 +127,7 @@ uint8_t wiz_read(uint16_t addr)
     return byte;
 }
 
-// set gateway address
+// set gateway address a.b.c.d
 void wiz_set_gateway(uint8_t a, uint8_t b, uint8_t c, uint8_t d) 
 {
     wiz_write(GATEWAY_1, a); 
@@ -136,7 +136,20 @@ void wiz_set_gateway(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
     wiz_write(GATEWAY_4, d); 
 }
 
-// set subnet address
+// prints gateway address to serial
+void wiz_get_gateway(void)
+{
+    uint8_t gateway[7] = {0,'.',0,'.',0,'.',0};
+    gateway[0] = wiz_read(GATEWAY_1); // returns first portion of address
+    gateway[2] = wiz_read(GATEWAY_2);
+    gateway[4] = wiz_read(GATEWAY_3);
+    gateway[6] = wiz_read(GATEWAY_4);
+    // serial_txchar(gateway);
+    serial_txstring(gateway);
+    serial_txstring("test");
+}
+
+// set subnet address a.b.c.d
 void wiz_set_subnet(uint8_t a, uint8_t b, uint8_t c, uint8_t d) 
 {
     wiz_write(SUBNET_1, a);
@@ -145,7 +158,7 @@ void wiz_set_subnet(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
     wiz_write(SUBNET_4, d); 
 }
 
-// set source mac address
+// set source mac address a.b.c.d.e.f
 void wiz_set_mac(uint8_t a, uint8_t b, uint8_t c, uint8_t d, uint8_t e, uint8_t f) 
 {
     wiz_write(MAC_1, a);
@@ -156,7 +169,7 @@ void wiz_set_mac(uint8_t a, uint8_t b, uint8_t c, uint8_t d, uint8_t e, uint8_t 
     wiz_write(MAC_6, f);
 }
 
-// set ip address
+// set ip address a.b.c.d
 void wiz_set_ip(uint8_t a, uint8_t b, uint8_t c, uint8_t d) 
 {
     wiz_write(IP_1, a); 
@@ -166,7 +179,6 @@ void wiz_set_ip(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
 }
 
 // set socket sock_n's port number with inputs upper and lower half of #'s hex value
-// 
 void wiz_set_port(uint8_t sock_n, uint8_t hex_upper, uint8_t hex_lower) 
 {
     
@@ -205,10 +217,11 @@ void wiz_init(void)
     wiz_set_mac(0x00, 0x08, 0xdc, 0x24, 0x4b, 0x7e);
     
 
-    wiz_read(GATEWAY_1); // debug get gateway
-    wiz_read(GATEWAY_2);
-    wiz_read(GATEWAY_3);
-    wiz_read(GATEWAY_4);
+    // wiz_read(GATEWAY_1); // debug get gateway
+    // wiz_read(GATEWAY_2);
+    // wiz_read(GATEWAY_3);
+    // wiz_read(GATEWAY_4);
+    wiz_get_gateway();
 }
 
 
@@ -216,6 +229,7 @@ void main(void)
 {
     CLK = LOW; // set clock idle state
     delay_us(1000);
+    serial_init();
     wiz_init();
 	while (1) {
     // RX_data();
