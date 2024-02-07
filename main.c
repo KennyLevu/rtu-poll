@@ -151,13 +151,37 @@ uint8_t wiz_read(uint16_t addr) {
 }
 
 // set gateway address
-void wiz_gateway(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
-    
+void wiz_set_gateway(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
+    wiz_write(GATEWAY_1, a); 
+    wiz_write(GATEWAY_2, b); 
+    wiz_write(GATEWAY_3, c); 
+    wiz_write(GATEWAY_4, d); 
 }
 
 // set subnet address
-void wiz_subnet(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
-    
+void wiz_set_subnet(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
+    wiz_write(SUBNET_1, a);
+    wiz_write(SUBNET_2, b); 
+    wiz_write(SUBNET_3, c); 
+    wiz_write(SUBNET_4, d); 
+}
+
+// set source mac address
+void wiz_set_mac(uint8_t a, uint8_t b, uint8_t c, uint8_t d, uint8_t e, uint8_t f) {
+    wiz_write(MAC_1, a);
+    wiz_write(MAC_2, b);
+    wiz_write(MAC_3, c);
+    wiz_write(MAC_4, d);
+    wiz_write(MAC_5, e);
+    wiz_write(MAC_6, f);
+}
+
+// set ip address
+void wiz_set_ip(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
+    wiz_write(IP_1, a); 
+    wiz_write(IP_2, b); 
+    wiz_write(IP_3, c); 
+    wiz_write(IP_4, d); 
 }
 
 // Initialize network
@@ -168,30 +192,54 @@ void wiz_init(void) {
     // TODO: config retry count register
 
     /* Init Sockets 1 and 2 for UDP and TCP*/
-    wiz_write(SOCKET_0, 0x02); // set to UDP with no multicast
-    wiz_write(SOCKET_1, 0x01); // set to TCP with ack on internal timeout
+    wiz_write(SOCKET_0, 0x02); // set socket 0 to UDP with no multicast
+    CLK = LOW;
+    wiz_write(SOCKET_1, 0x01); // set socket 1 to TCP with ack on internal timeout
+    CLK = LOW;
+
     // wiz_read(SOCKET_0); // debug confirm socket
     // wiz_read(SOCKET_1); // debug confirm socket
 
     // 126.10.220.254
-    wiz_write(GATEWAY_1, 126); //7e
-    wiz_write(GATEWAY_2, 10); // a
-    wiz_write(GATEWAY_3, 220); // dc
-    wiz_write(GATEWAY_4, 254); // fe
-    // wiz_read(GATEWAY_1); // debug get gateway
-    // wiz_read(GATEWAY_2);
-    // wiz_read(GATEWAY_3);
-    // wiz_read(GATEWAY_4);
+    // 7e.a.dc.fe
+    wiz_set_gateway(126,10,220,254);
+    CLK = LOW;
+    
+    // wiz_write(GATEWAY_1, 126); //7e
+    // wiz_write(GATEWAY_2, 10); // a
+    // wiz_write(GATEWAY_3, 220); // dc
+    // wiz_write(GATEWAY_4, 254); // fe
+    wiz_read(GATEWAY_1); // debug get gateway
+    CLK = LOW;
+
+    wiz_read(GATEWAY_2);
+    CLK = LOW;
+
+    wiz_read(GATEWAY_3);
+    CLK = LOW;
+
+    wiz_read(GATEWAY_4);
+    CLK = LOW;
+
 
     // 255.255.192.0 <--- subnet mask
-    wiz_write(SUBNET_1, 255);
-    wiz_write(SUBNET_2, 255);
-    wiz_write(SUBNET_3, 192);
-    wiz_write(SUBNET_4, 0);
+    // wiz_write(SUBNET_1, 255);
+    // wiz_write(SUBNET_2, 255);
+    // wiz_write(SUBNET_3, 192);
+    // wiz_write(SUBNET_4, 0);
 }
 
+// delay approximately 10us for each count
+void delay_us(unsigned int us_count)
+ {  
+    while(us_count!=0)
+      {
+         us_count--;
+       }
+   }
 void main(void)
 {
+    delay_us(1000);
     CLK = LOW; // set clock idle state
     // MISO = LOW;
     wiz_init();
