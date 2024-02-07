@@ -189,23 +189,17 @@ void wiz_init(void) {
 
     // wiz_read(SOCKET_0); // debug confirm socket
     // wiz_read(SOCKET_1); // debug confirm socket
-
-    // 126.10.220.254 <---gateway address
-    // 7e.a.dc.fe
-    wiz_set_gateway(126,10,220,254);
-    // 255.255.192.0 <--- subnet mask
-    // ff.ff.c0.0
-    wiz_set_subnet(255,255,192,0);
-    // 126.10.218.163 <--- my pc
-    // 126.10.218.163 <--- set mcu
-    wiz_set_ip(126,10,220,100);
     
+    wiz_set_gateway(126,10,220,254);   // 126.10.220.254 <---gateway address // 7e.a.dc.fe
+    wiz_set_subnet(255,255,192,0);    // 255.255.192.0 <--- subnet mask // ff.ff.c0.0
+    wiz_set_ip(126,10,220,100);     // 126.10.218.163 <--- my pc // 126.10.218.163 <--- set mcu
+    wiz_set_port(0,0x13,0x88); // set udp port 5100 0x1388
+    wiz_set_port(1,0x13,0xec);   // set tcp port 5000 0x13ec
+
     wiz_read(GATEWAY_1); // debug get gateway
     wiz_read(GATEWAY_2);
     wiz_read(GATEWAY_3);
     wiz_read(GATEWAY_4);
-
-
 }
 
 
