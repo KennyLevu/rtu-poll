@@ -3,8 +3,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
-int buf_counter = 0;
-// #include "serial.h"
 #include "periph.h"
 #include "constant.h"
 
@@ -74,6 +72,7 @@ void cmdout_16(uint16_t command)
         else {
             MOSI = LOW;
         }
+        // delay10();
         CLK = HIGH;
         command = command << 1;
         CLK = LOW;
@@ -88,6 +87,7 @@ void cmdout_8(uint8_t command)
         else {
             MOSI = LOW;
         }
+        // delay10();
         CLK = HIGH;
         command = command << 1;
         CLK = LOW;
@@ -116,6 +116,7 @@ uint8_t wiz_read(uint16_t addr)
     // shift in data
     for (uint8_t i = 0; i < 8; i++) {
         CLK = HIGH;
+        // delay10();
         // delay_us(2);
         byte = byte | MISO; // shift in MSB
         CLK = LOW;
