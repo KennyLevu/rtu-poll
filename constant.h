@@ -40,6 +40,23 @@
 #define IP_3 0x0011
 #define IP_4 0x0012
 
+// Mode Register
+#define MODE 0x0000
+
+// Interrupt Mask Rgister
+#define IMR 0x0016
+
+// Retry Time Value Register
+#define RETRY_U 0x0017
+#define RETRY_L 0x0018
+
+// Retry Count Register
+#define RETRY_COUNT 0x0019
+
+// RX Memory Size RMSR
+#define RX_MEM_SIZE 0x001a 
+// TX Memory Size TMSR
+#define TX_MEM_SIZE 0x001b
 
 
 #define HIGH 1

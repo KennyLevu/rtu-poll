@@ -114,11 +114,11 @@ uint8_t wiz_read(uint16_t addr)
     uint8_t byte = 0; // hold output data
     cmdout_8(OP_READ);
     cmdout_16(addr);
-    delay_us(2);
+    // delay_us(2);
     // shift in data
     for (uint8_t i = 0; i < 8; i++) {
         CLK = HIGH;
-        delay_us(2);
+        // delay_us(2);
         byte = byte | MISO; // shift in MSB
         CLK = LOW;
         byte = byte << 1; // create room for new bit
@@ -174,6 +174,31 @@ void wiz_get_ip(void)
     // serial_txstring(ipaddr);
 
 }
+
+// prints subnet addr to serial
+void wiz_get_subnet(void)
+{
+    char subnet[8] = {'z','.','z','.','z','.','z','\0'};
+    subnet[0] = (char)wiz_read(SUBNET_1); // returns first portion of address
+    subnet[2] = (char)wiz_read(SUBNET_2);
+    subnet[4] = (char)wiz_read(SUBNET_3);
+    subnet[6] = (char)wiz_read(SUBNET_4);
+    // serial_txstring(subnet);
+
+}
+
+// prints mac to serial
+void wiz_get_mac(void)
+{
+    char mac[12] = {'z','.','z','.','z','.','z','.','z','.','z','\0'};
+    mac[0] = (char)wiz_read(MAC_1); // returns first portion of address
+    mac[2] = (char)wiz_read(MAC_2); 
+    mac[4] = (char)wiz_read(MAC_3); 
+    mac[6] = (char)wiz_read(MAC_4); 
+    mac[8] = (char)wiz_read(MAC_5); 
+    mac[10] = (char)wiz_read(MAC_6); 
+    
+}
 // set subnet address a.b.c.d
 void wiz_set_subnet(uint8_t a, uint8_t b, uint8_t c, uint8_t d) 
 {
@@ -223,13 +248,16 @@ void wiz_set_port(uint8_t sock_n, uint8_t hex_upper, uint8_t hex_lower)
 // Initialize network
 void wiz_init(void) 
 {
-    // TODO: config mode register
-    // TODO: config interrupt mask register
     // TODO: config retry time-value register
-    // TODO: config retry count register
+    // TODO: config retry count register 
+    wiz_write(MODE, 0x00);  // disable indirect bus and pppoe, disable ping block mode
+    wiz_write(IMR, 0xc3);   // disable sockets 3 and 2, PPPoE interrupts | enable ip conflict and desintation unreachable interrupts
 
-    wiz_set_gateway(126,10,220,254);   // 126.10.220.254 <---gateway address // 7e.a.dc.fe
-  
+    // Divide 8KB of RX memory and 8KB of TX memory over sockets 0 and 1
+    // Byte representation divided into 4 has 2 bits presenting each socket from greatest to least
+    // ex. 1100 0000 assigns all memory to socket 3 (11 for 8KB)
+    wiz_write(RX_MEM_SIZE, 0x0A);  // assign 4kb to s0/s1 each  0000 1010 
+    wiz_write(TX_MEM_SIZE, 0x0A);   // assign 4kb to s0/s1 each 0000 1010
     /* Init Sockets 1 and 2 for UDP and TCP*/
     wiz_write(SOCKET_0, 0x02); // set socket 0 to UDP with no multicast
     wiz_write(SOCKET_1, 0x01); // set socket 1 to TCP with ack on internal timeout
@@ -239,12 +267,15 @@ void wiz_init(void)
     // wiz_read(SOCKET_0); // debug confirm socket
     // wiz_read(SOCKET_1); // debug confirm socket
     
-    // wiz_set_gateway(126,10,220,254);   // 126.10.220.254 <---gateway address // 7e.a.dc.fe
+    wiz_set_gateway(126,10,220,254);   // 126.10.220.254 <---gateway address // 7e.a.dc.fe
     wiz_set_subnet(255,255,192,0);    // 255.255.192.0 <--- subnet mask // ff.ff.c0.0
     wiz_set_mac(0x00, 0x08, 0xdc, 0x24, 0x4b, 0x7e); // mac address read as hex
-    wiz_set_ip(126,10,200,0);     // 126.10.218.163 <--- my pc // 126.10.218.163 7e.a.c8.0<--- set mcu
+    wiz_set_ip(126,10,200,0);     // 126.10.218.163 <--- my pc // 126.10.200.0 7e.a.c8.0<--- set mcu
+    
     wiz_get_gateway();
+    wiz_get_subnet();
     wiz_get_ip();
+    wiz_get_mac();
 
 }
 
