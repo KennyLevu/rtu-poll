@@ -18,7 +18,7 @@ void delay_us(unsigned int us_count)
 }
 
 // delay approx 10us
-void delay10() {
+void delay10(void) {
     // formula to calculate timer delay: https://www.electronicshub.org/delay-using-8051-timers/
     TH0 = 0xFF;
     TL0 = 0xF6;
@@ -246,7 +246,7 @@ void wiz_set_port(uint8_t sock_n, uint8_t hex_upper, uint8_t hex_lower)
 // Initialize network
 void wiz_init(void) 
 {   
-    bool udp_open, tcp_open = false;
+    bool udp_open = false, tcp_open = false;
     // TODO: config retry time-value register
     // TODO: config retry count register 
     wiz_write(MODE, 0x80);  // disable indirect bus and pppoe, disable ping block mode, 1 on MSB soft reset
