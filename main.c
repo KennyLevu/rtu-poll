@@ -9,21 +9,7 @@ int buf_counter = 0;
 
 // Initial configuartion setting and code sourced from: https://exploreembedded.com/wiki/8051_Family_C_Library
 
-/*-------------------------------------------------------------------------------
-                         void serial_init()
-----------------------------------------------------------------------------------
- * Arguments: none
- * Return: none
- 
- * description: This function is used to initialize the serial in shift register mode with a baud rate of SYSclk/12
 
-    1.  8-Bit Shift Register MODE0. Data bits are transmitted/received LSB
-                    RxD is used for data i/o, TxD is used for clock
-                    Baud is fixed at 1/12 System clock cycle
-    2.  9600 baud rate configured by setting TH1
-    3.      SCON is configured in MODE0 ie. 8bit Data 1-Start and 1-Stop bit
-    4.      Finally the timer is turned ON by setting TR1 bit to generate the baud rate
-----------------------------------------------------------------------------------*/
 void serial_init(void)
 {
     // SCON = SCON & 0x0F; 
@@ -164,28 +150,53 @@ uint8_t wiz_read(uint16_t addr) {
     return byte;
 }
 
+// set gateway address
+void wiz_gateway(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
+    
+}
+
+// set subnet address
+void wiz_subnet(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
+    
+}
+
+// Initialize network
 void wiz_init(void) {
     // TODO: config mode register
     // TODO: config interrupt mask register
     // TODO: config retry time-value register
     // TODO: config retry count register
+
+    /* Init Sockets 1 and 2 for UDP and TCP*/
+    wiz_write(SOCKET_0, 0x02); // set to UDP with no multicast
+    wiz_write(SOCKET_1, 0x01); // set to TCP with ack on internal timeout
+    // wiz_read(SOCKET_0); // debug confirm socket
+    // wiz_read(SOCKET_1); // debug confirm socket
+
+    // 126.10.220.254
+    wiz_write(GATEWAY_1, 126); //7e
+    wiz_write(GATEWAY_2, 10); // a
+    wiz_write(GATEWAY_3, 220); // dc
+    wiz_write(GATEWAY_4, 254); // fe
+    // wiz_read(GATEWAY_1); // debug get gateway
+    // wiz_read(GATEWAY_2);
+    // wiz_read(GATEWAY_3);
+    // wiz_read(GATEWAY_4);
+
+    // 255.255.192.0 <--- subnet mask
+    wiz_write(SUBNET_1, 255);
+    wiz_write(SUBNET_2, 255);
+    wiz_write(SUBNET_3, 192);
+    wiz_write(SUBNET_4, 0);
 }
 
 void main(void)
 {
-    CLK = LOW; 
-    // // serial_transmit();
-    // // serial_init();
-
-    wiz_write(SOCKET_0, 0x02); // set to UDP with no multicast
-    wiz_write(SOCKET_1, 0x01); // set to TCP with ack on internal timeout
-    wiz_read(SOCKET_0);
-    wiz_read(SOCKET_1);
-    CLK = LOW;
-    // serial_txchar(read);
+    CLK = LOW; // set clock idle state
+    // MISO = LOW;
+    wiz_init();
 	while (1) {
     // RX_data();
-
 
     }
 }
