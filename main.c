@@ -7,8 +7,14 @@ int buf_counter = 0;
 #include "periph.h"
 #include "constant.h"
 
-// Initial configuartion setting and code sourced from: https://exploreembedded.com/wiki/8051_Family_C_Library
-
+// delay approximately 10us for each count
+void delay_us(unsigned int us_count)
+ {  
+    while(us_count!=0)
+      {
+         us_count--;
+       }
+   }
 
 void serial_init(void)
 {
@@ -60,90 +66,57 @@ unsigned char RX_data(void)
     return a;
 }
 
-
-// OP Write Instruction
-void wiz_write(uint16_t addr, uint8_t data) {
-    CS = LOW;
-    uint8_t command = OP_WRITE;
-    // send op code
-    for (uint8_t i = 0; i < 8; i++) {
-        if (command & MSK_8) {
+// write bytes to MOSI 
+void cmdout_16(uint16_t command) {
+    for (uint8_t i = 0; i < BYTE_16; i++) {
+        if (command & MSK_16) {
             MOSI = HIGH;
         }
         else {
-            MOSI = 0;
+            MOSI = LOW;
         }
         CLK = HIGH;
         command = command << 1;
         CLK = LOW;
     }
-
-    // send address field
-    for (uint8_t i = 0; i < 16; i++) {
-        if (addr & MSK_16) {
+}
+void cmdout_8(uint8_t command) {
+    for (uint8_t i = 0; i < BYTE_8; i++) {
+        if (command & MSK_8) {
             MOSI = HIGH;
         }
         else {
             MOSI = LOW;
         }
         CLK = HIGH;
-        addr = addr << 1;
+        command = command << 1;
         CLK = LOW;
     }
+}
 
-    // send data
-    for (uint8_t i = 0; i < 8; i++) {
-        if (data & MSK_8) {
-            MOSI = HIGH;
-        }
-        else {
-            MOSI = LOW;
-        }
-        CLK = HIGH;
-        data = data << 1;
-        CLK = LOW;
-    }
-
+// OP Write Instruction
+void wiz_write(uint16_t addr, uint8_t data) {
+    CS = LOW;
+    uint8_t command = OP_WRITE;
+    cmdout_8(OP_WRITE);
+    cmdout_16(addr);
+    cmdout_8(data);
     CS = HIGH;
 }
 
 // OP Read Instruction
 uint8_t wiz_read(uint16_t addr) {
     CS = LOW;
-    uint8_t command = OP_READ;
     uint8_t byte = 0; // hold output data
-    // send op code
-    for (uint8_t i = 0; i < 8; i++) {
-        if (command & MSK_8) {
-            MOSI = HIGH;
-        }
-        else {
-            MOSI = LOW;
-        }
-        CLK = HIGH;
-        command = command << 1;
-        CLK = LOW;
-    }
-
-    // send address field
-    for (uint8_t i = 0; i < 16; i++) {
-        if (addr & MSK_16) {
-            MOSI = HIGH;
-        }
-        else {
-            MOSI = LOW;
-        }
-        CLK = HIGH;
-        addr = addr << 1;
-        CLK = LOW;
-    }
+    cmdout_8(OP_READ);
+    cmdout_16(addr);
 
     // shift in data
     for (uint8_t i = 0; i < 8; i++) {
-        byte = byte << 1; // create room for new bit
         CLK = HIGH;
         byte = byte | MISO; // shift in MSB
         CLK = LOW;
+        byte = byte << 1; // create room for new bit
     }
 
     CS = HIGH;
@@ -184,64 +157,62 @@ void wiz_set_ip(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
     wiz_write(IP_4, d); 
 }
 
+// set socket sock_n's port number with inputs upper and lower half of #'s hex value
+// 
+void wiz_set_port(uint8_t sock_n, uint8_t hex_upper, uint8_t hex_lower) {
+    uint16_t addrl, addru;
+
+    // sets address numbers for upper and lower half of port address for sockets 0 or 1
+    if (sock_n == 0) {
+        addrl = 0x404;
+        addru = 0x405
+    }
+    else if (sock_n == 1) {
+        addrl = 0x504;
+        addru = 0x505;
+    }
+
+    wiz_write(addru, hex_upper);
+    wiz_write(addrl, hex_lower);
+}
+
+
 // Initialize network
 void wiz_init(void) {
     // TODO: config mode register
     // TODO: config interrupt mask register
     // TODO: config retry time-value register
     // TODO: config retry count register
-
     /* Init Sockets 1 and 2 for UDP and TCP*/
     wiz_write(SOCKET_0, 0x02); // set socket 0 to UDP with no multicast
-    CLK = LOW;
     wiz_write(SOCKET_1, 0x01); // set socket 1 to TCP with ack on internal timeout
-    CLK = LOW;
 
     // wiz_read(SOCKET_0); // debug confirm socket
     // wiz_read(SOCKET_1); // debug confirm socket
 
-    // 126.10.220.254
+    // 126.10.220.254 <---gateway address
     // 7e.a.dc.fe
     wiz_set_gateway(126,10,220,254);
-    CLK = LOW;
-    
-    // wiz_write(GATEWAY_1, 126); //7e
-    // wiz_write(GATEWAY_2, 10); // a
-    // wiz_write(GATEWAY_3, 220); // dc
-    // wiz_write(GATEWAY_4, 254); // fe
-    wiz_read(GATEWAY_1); // debug get gateway
-    CLK = LOW;
-
-    wiz_read(GATEWAY_2);
-    CLK = LOW;
-
-    wiz_read(GATEWAY_3);
-    CLK = LOW;
-
-    wiz_read(GATEWAY_4);
-    CLK = LOW;
-
-
     // 255.255.192.0 <--- subnet mask
-    // wiz_write(SUBNET_1, 255);
-    // wiz_write(SUBNET_2, 255);
-    // wiz_write(SUBNET_3, 192);
-    // wiz_write(SUBNET_4, 0);
+    // ff.ff.c0.0
+    wiz_set_subnet(255,255,192,0);
+    // 126.10.218.163 <--- my pc
+    // 126.10.218.163 <--- set mcu
+    wiz_set_ip(126,10,220,100);
+    
+    wiz_read(GATEWAY_1); // debug get gateway
+    wiz_read(GATEWAY_2);
+    wiz_read(GATEWAY_3);
+    wiz_read(GATEWAY_4);
+
+
 }
 
-// delay approximately 10us for each count
-void delay_us(unsigned int us_count)
- {  
-    while(us_count!=0)
-      {
-         us_count--;
-       }
-   }
+
 void main(void)
 {
-    delay_us(1000);
     CLK = LOW; // set clock idle state
-    // MISO = LOW;
+    delay_us(1000);
     wiz_init();
 	while (1) {
     // RX_data();

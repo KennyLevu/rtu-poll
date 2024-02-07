@@ -35,4 +35,6 @@
 
 #define HIGH 1
 #define LOW 0
+#define BYTE_8 8
+#define BYTE_16 16
 #endif
