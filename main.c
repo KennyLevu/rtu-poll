@@ -15,21 +15,18 @@ void delay_us(unsigned int us_count)
       {
          us_count--;
        }
-   }
-
-void serial_init(void)
-{
-    // SCON = SCON & 0x0F; 
-    SCON = 0x50;    // serial mode 3 8 bit data 1 start and 1 stop bit
-    TMOD = 0x20;    // timer 1 mode 2 and timer 2 mode 0 ---> mode 2 is 16bit timer/counter auto reload and thx/tlx are cascaded
-    TH1 = 0xfd;     // Load value for 9600 baud --> UART Mode 3 means baud is determined by timer 1's overflow rate 
-    REN = HIGH;        // serial port initialization
-    EA = HIGH;			// enable interrupts
-	ES = HIGH;			// enable serial port interrupts
-    TR1 = HIGH;        // Turn ON timer 1
-
 }
 
+// delay approx 10us
+void delay10() {
+    // formula to calculate timer delay: https://www.electronicshub.org/delay-using-8051-timers/
+    TH0 = 0xFF;
+    TL0 = 0xF6;
+    TR0 = 1; // timer 0 start
+    while (TF0 == 0); // check overflow condition
+    TR0 = 0;    // Stop Timer
+    TF0 = 0;   // Clear flag
+}
 
 // char getCharacter (void)
 // {
@@ -311,12 +308,22 @@ void wiz_init(void)
 
 }
 
+void setup(void)
+{
+    SCON = 0x50;    // Serial Mode 1 8 bit UART with timer1 baud rate
+    TMOD = 0x21;    // timer 1 mode 2 8 bit auto reload | timer 0 mode 1 16 bit timer
+    TH1 = 0xfd;     // Load value for 9600 baud --> UART Mode 1 means baud is determined by timer 1's overflow rate 
+    REN = HIGH;        // serial port initialization
+    EA = HIGH;			// enable interrupts
+	ES = HIGH;			// enable serial port interrupts
+}
 
 void main(void)
 {
+    delay_us(1000);
+    setup();
     CLK = LOW; // set clock idle state
     delay_us(1000);
-    // serial_init();
     wiz_init();
 	while (1) {
     // RX_data();
