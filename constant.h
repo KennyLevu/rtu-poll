@@ -6,13 +6,18 @@
 #define OP_WRITE 0xf0
 #define OP_READ 0x0f
 
-// S0/S1 Registers
-#define SOCKET_0 0x0400
-#define SOCKET_0_PORT_U 0x0404
-#define SOCKET_0_PORT_L 0x0405
-#define SOCKET_1 0x0500
-#define SOCKET_1_PORT_U 0x0504
-#define SOCKET_1_PORT_L 0x0505
+// S0/S1 Registers Scocket n Mode Register
+#define SOCKET0 0x0400 // socket mode
+#define SOCKET0_COM 0x0401 // command register
+#define SOCKET0_STAT 0x403 // status register
+#define SOCKET0_PORT_U 0x0404 // upper half port number
+#define SOCKET0_PORT_L 0x0405 // lower half port number
+
+#define SOCKET1 0x0500
+#define SOCKET1_COM 0x0501
+#define SOCKET1_STAT 0x503
+#define SOCKET1_PORT_U 0x0504
+#define SOCKET1_PORT_L 0x0505
 
 // GAR Register
 #define GATEWAY_1 0x0001
@@ -58,6 +63,22 @@
 // TX Memory Size TMSR
 #define TX_MEM_SIZE 0x001b
 
+
+/* SOCKET STATUS COMMANDS */
+#define SOCK_CLOSED 0X00
+#define SOCK_INIT 0x13
+#define SOCK_LISTEN 0x14
+#define SOCK_ESTABLISHED 0x17
+#define SOCK_UDP 0x22
+#define OPEN 0x01
+#define LISTEN 0x02
+#define CONNECT 0x04
+#define DISCON 0x08
+#define SEND 0x20
+#define SEND_MAC 0x21
+#define SEND_KEEP 0x22
+#define RECV 0x40
+#define CLOSED 0x10
 
 #define HIGH 1
 #define LOW 0

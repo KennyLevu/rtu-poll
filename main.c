@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 int buf_counter = 0;
 // #include "serial.h"
 #include "periph.h"
@@ -233,12 +234,12 @@ void wiz_set_port(uint8_t sock_n, uint8_t hex_upper, uint8_t hex_lower)
 {
     
     if (sock_n == 0) {
-        wiz_write(SOCKET_0_PORT_U, hex_upper);
-        wiz_write(SOCKET_0_PORT_L, hex_lower);
+        wiz_write(SOCKET0_PORT_U, hex_upper);
+        wiz_write(SOCKET0_PORT_L, hex_lower);
     }
     else if (sock_n == 1) {
-        wiz_write(SOCKET_1_PORT_U, hex_upper);
-        wiz_write(SOCKET_1_PORT_L, hex_lower);
+        wiz_write(SOCKET1_PORT_U, hex_upper);
+        wiz_write(SOCKET1_PORT_L, hex_lower);
     }
 
     
@@ -247,26 +248,15 @@ void wiz_set_port(uint8_t sock_n, uint8_t hex_upper, uint8_t hex_lower)
 
 // Initialize network
 void wiz_init(void) 
-{
+{   
+    bool udp_open, tcp_open = false;
     // TODO: config retry time-value register
     // TODO: config retry count register 
-    wiz_write(MODE, 0x00);  // disable indirect bus and pppoe, disable ping block mode
+    wiz_write(MODE, 0x80);  // disable indirect bus and pppoe, disable ping block mode, 1 on MSB soft reset
     wiz_write(IMR, 0xc3);   // disable sockets 3 and 2, PPPoE interrupts | enable ip conflict and desintation unreachable interrupts
 
-    // Divide 8KB of RX memory and 8KB of TX memory over sockets 0 and 1
-    // Byte representation divided into 4 has 2 bits presenting each socket from greatest to least
-    // ex. 1100 0000 assigns all memory to socket 3 (11 for 8KB)
-    wiz_write(RX_MEM_SIZE, 0x0A);  // assign 4kb to s0/s1 each  0000 1010 
-    wiz_write(TX_MEM_SIZE, 0x0A);   // assign 4kb to s0/s1 each 0000 1010
-    /* Init Sockets 1 and 2 for UDP and TCP*/
-    wiz_write(SOCKET_0, 0x02); // set socket 0 to UDP with no multicast
-    wiz_write(SOCKET_1, 0x01); // set socket 1 to TCP with ack on internal timeout
-    wiz_set_port(0,0x13,0x88); // set socket 0 udp port to 5100 0x1388
-    wiz_set_port(1,0x13,0xec);   // set socket 1 tcp port to 5000 0x13ec
 
-    // wiz_read(SOCKET_0); // debug confirm socket
-    // wiz_read(SOCKET_1); // debug confirm socket
-    
+    /* Config Initial Source Network Settings */
     wiz_set_gateway(126,10,220,254);   // 126.10.220.254 <---gateway address // 7e.a.dc.fe
     wiz_set_subnet(255,255,192,0);    // 255.255.192.0 <--- subnet mask // ff.ff.c0.0
     wiz_set_mac(0x00, 0x08, 0xdc, 0x24, 0x4b, 0x7e); // mac address read as hex
@@ -276,6 +266,48 @@ void wiz_init(void)
     wiz_get_subnet();
     wiz_get_ip();
     wiz_get_mac();
+
+
+    // Divide 8KB of RX memory and 8KB of TX memory over sockets 0 and 1
+    // Byte representation divided into 4 has 2 bits presenting each socket from greatest to least
+    // ex. 1100 0000 assigns all memory to socket 3 (11 for 8KB)
+    wiz_write(RX_MEM_SIZE, 0x0A);  // assign 4kb to s0/s1 each  0000 1010 
+    wiz_write(TX_MEM_SIZE, 0x0A);   // assign 4kb to s0/s1 each 0000 1010
+
+    
+    /* Init Sockets 0/1
+       Socket 0: UDP 5100 | 4KB RX/TX | No Multicast
+       Socket 1: TCP 5000 | 4KB RX/TX | Timeout ACK*/
+    wiz_write(SOCKET0, 0x02); // set socket 0 to UDP with no multicast
+    wiz_write(SOCKET1, 0x01); // set socket 1 to TCP with ack on internal timeout
+    /* Bind sockets to port numbers */
+    wiz_set_port(0,0x13,0x88); // set socket 0 udp port to 5100 0x1388
+    wiz_set_port(1,0x13,0xec);   // set socket 1 tcp port to 5000 0x13ec
+
+    /* Initialize UDP Socket*/
+    while (udp_open != true) {
+        wiz_write(SOCKET0_COM, OPEN); // open socket
+        if (wiz_read(SOCKET0_STAT) != SOCK_UDP) {
+            wiz_write(SOCKET0_COM, CLOSED); // socket not initialized, retry
+        } else {
+            udp_open = true;
+        }
+    }
+    
+    /* Initialize TCP Socket*/
+    while (tcp_open != true) {
+        wiz_write(SOCKET1_COM, OPEN);
+        if (wiz_read(SOCKET1_STAT) != SOCK_INIT) {
+            wiz_write(SOCKET1_COM, CLOSED);
+            continue;
+        } 
+        wiz_write(SOCKET1_COM, LISTEN);
+        if (wiz_read(SOCKET1_STAT) != SOCK_LISTEN) {
+            wiz_write(SOCKET1_COM, CLOSED);
+        } else {
+            tcp_open = true;
+        }
+    }
 
 }
 
