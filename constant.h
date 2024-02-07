@@ -7,7 +7,11 @@
 #define OP_READ 0x0f
 
 #define SOCKET_0 0X0400
+#define SOCKET_0_PORT_U 0x0404
+#define SOCKET_0_PORT_L 0x0405
 #define SOCKET_1 0X0500
+#define SOCKET_1_PORT_U 0x0504
+#define SOCKET_1_PORT_L 0x0505
 
 #define GATEWAY_1 0x0001
 #define GATEWAY_2 0x0002
