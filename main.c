@@ -127,7 +127,7 @@ uint8_t wiz_read(uint16_t addr)
         byte = byte | MISO; // shift in MSB
         CLK = LOW;
     }
-    
+
     CS = HIGH;
     return byte;
 }
@@ -299,7 +299,6 @@ void wiz_init(void)
 void udp_open(void) 
 {
     bool udp_open = false;
-    uint8_t status;
     /* Initialize UDP Socket*/
     while (udp_open == false) {
         // serial_txstring("still trying");
@@ -321,12 +320,14 @@ void udp_rx_helper(void)
     uint8_t rxsizu, rxsizl; // stores upper and lower half of rx register size
     uint16_t rx_size = 0x0000;
     uint16_t rx_offset;
-    volatile uint8_t *rx_base = (volatile uint8_t *) SOCKET0_RX_BASE;
+    volatile uint8_t *rx_base = (volatile uint8_t *) SOCKET0_RX_BASE; // pointer to base address of rx register
     volatile uint8_t *rx_start_addr = NULL;
     volatile uint8_t *header_addr = NULL;
     uint16_t upper_size, left_size; // upper size stores uper size of start address, left stores left size of base addr
     uint8_t peer_ip[4];
     uint16_t peer_port = 0x0000, data_size = 0x0000, rxrd = 0x0000;
+    uint8_t *mydata;
+
 
     /* Get rx register size by combinning upper and lower half size values */
     rxsizu = wiz_read(SOCKET0_RXSIZU);
@@ -339,7 +340,7 @@ void udp_rx_helper(void)
     rxrd = rxrd | wiz_read(SOCKET0_RXRDL);
     rx_offset = rxrd + RXTX_MASK;
     /* Get start (physical) address*/
-    rx_start_addr = (rx_base + rx_offset);
+    rx_start_addr = (volatile uint8_t *)(SOCKET0_RX_BASE + rx_offset);
 
     /* Read header information 
         1. Get header address and update start addr
@@ -366,7 +367,7 @@ void udp_rx_helper(void)
         memcpy(rx_start_addr, header_addr, UDP_HEADER_SIZE);
     }
     // update start address 
-    rx_start_addr = rx_base + rx_offset;
+    rx_start_addr =  (volatile uint8_t *)(SOCKET0_RX_BASE + rx_offset);
 
     /* get remote peer information and receive data size from header*/
     for (int i = 0; i < 4; i++) {
@@ -378,12 +379,32 @@ void udp_rx_helper(void)
     data_size = data_size | (header_addr[6] << 8);
     data_size = data_size | header_addr[7];
 
+    mydata = (uint8_t *) malloc(data_size);
+    /* Read Data
+        1. Check if data size overflows rx buffer
+            - Read data in two parts
+            */
+    if( (rx_offset + data_size) > (RXTX_MASK + 1) ) {
+        upper_size = (RXTX_MASK + 1) - rx_offset;
+        memcpy(rx_start_addr, mydata, upper_size);
+        mydata += upper_size;
+        left_size = data_size - upper_size;
+        memcpy(rx_base, mydata, left_size);
+    }
+    else {
+        memcpy(rx_start_addr, mydata, data_size);
+    }
+    // received data
+    free(mydata);
+    wiz_write(SOCKET0_COM, RECV);
+
 }
 
 void udp_rx(void) 
 {
     // check the reception interrupt bit is set for socket 0
     if (wiz_read(SOCKET0_IR) & 0x04) {
+        serial_txstring("Reception detected\n");
         udp_rx_helper();
     }
 }
@@ -408,7 +429,7 @@ void main(void)
     wiz_init();
     udp_open();
 	while (1) {
-        // serial_txchar(0x41);
-        serial_txstring("Hello world\n");
+        udp_rx();
+
     }
 }
