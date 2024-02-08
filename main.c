@@ -50,6 +50,14 @@ void serial_txchar(char ch)
         TI=0;         //Clear the flag for next cycle.
 }
 
+void serial_txint(unsigned int in)
+{
+    SBUF=in;       // Load the data to be transmitted
+    while(TI==0);    // Wait till the data is trasmitted
+        TI=0;         //Clear the flag for next cycle.
+}
+
+
 void serial_txstring(char *string_ptr)
  {
           while(*string_ptr)
@@ -252,10 +260,11 @@ void wiz_set_port(uint8_t sock_n, uint8_t hex_upper, uint8_t hex_lower)
 // Initialize network
 void wiz_init(void) 
 {   
-    // TODO: config retry time-value register
-    // TODO: config retry count register 
     wiz_write(MODE, 0x00);  // disable indirect bus and pppoe, disable ping block mode
-    wiz_write(IMR, 0x01);   // disable sockets 3 and 2, PPPoE interrupts | enable ip conflict and desintation unreachable interrupts
+    wiz_write(IMR, 0xc3);   // disable sockets 3 and 2, PPPoE interrupts | enable ip conflict and desintation unreachable interrupts, 0 and 1
+    wiz_write(RETRY_U, 0x07); // timeout periods 200ms
+    wiz_write(RETRY_L, 0xd0);
+    wiz_write(RETRY_COUNT, 5);
 
     /* Config Initial Source Network Settings */
     wiz_set_gateway(126,10,220,254);   // 126.10.220.254 <---gateway address // 7e.a.dc.fe
@@ -277,7 +286,10 @@ void wiz_init(void)
     wiz_write(TX_MEM_SIZE, 0x0A);   // assign 4kb to s0/s1 each 0000 1010
     /* Bind sockets to port numbers */
     wiz_set_port(0,0x13,0x88); // set socket 0 udp port to 5100 0x1388
+    // wiz_set_port(0,0x36,0x39); // set socket 0 udp port to 5100 0x1388
+
     wiz_set_port(1,0x13,0xec);   // set socket 1 tcp port to 5000 0x13ec
+
     
     // /* Initialize TCP Socket*/
     // while (tcp_open != true) {
@@ -309,6 +321,7 @@ void udp_open(void)
         if (wiz_read(SOCKET0_STAT) != SOCK_UDP) {
             wiz_write(SOCKET0_COM, CLOSED); // socket not initialized, retry
         } else {
+            serial_txstring("UDP Socket 0 port 5100 open");
             udp_open = true;
         }
     }
@@ -402,8 +415,9 @@ void udp_rx_helper(void)
 
 void udp_rx(void) 
 {
+    serial_txstring("Reception detected\n");
     // check the reception interrupt bit is set for socket 0
-    if (wiz_read(SOCKET0_IR) & 0x04) {
+    if (wiz_read(SOCKET0_IR)) {
         serial_txstring("Reception detected\n");
         udp_rx_helper();
     }
@@ -430,6 +444,8 @@ void main(void)
     udp_open();
 	while (1) {
         udp_rx();
-
+        // if (wiz_read(SOCKET0_STAT) == SOCK_UDP) {
+        //     serial_txstring("UDP Socket 0 port 5100 open");
+        // }
     }
 }
