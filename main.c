@@ -123,11 +123,11 @@ uint8_t wiz_read(uint16_t addr)
         CLK = HIGH;
         // delay10();
         // delay_us(2);
+        byte = byte << 1; // create room for new bit
         byte = byte | MISO; // shift in MSB
         CLK = LOW;
-        byte = byte << 1; // create room for new bit
     }
-
+    
     CS = HIGH;
     return byte;
 }
@@ -299,9 +299,14 @@ void wiz_init(void)
 void udp_open(void) 
 {
     bool udp_open = false;
+    uint8_t status;
     /* Initialize UDP Socket*/
-    while (udp_open != true) {
+    while (udp_open == false) {
+        // serial_txstring("still trying");
         wiz_write(SOCKET0_COM, OPEN); // open socket
+        // status = wiz_read(SOCKET0_STAT);
+        // serial_txchar(status);
+        // serial_txchar('\n');
         if (wiz_read(SOCKET0_STAT) != SOCK_UDP) {
             wiz_write(SOCKET0_COM, CLOSED); // socket not initialized, retry
         } else {
@@ -386,22 +391,24 @@ void udp_rx(void)
 void setup(void)
 {
     SCON = 0x50;    // Serial Mode 1 8 bit UART with timer1 baud rate
-    TMOD = 0x21;    // timer 1 mode 2 8 bit auto reload | timer 0 mode 1 16 bit timer
+    TMOD = 0x20;    // timer 1 mode 2 8 bit auto reload | timer 0 mode 1 16 bit timer
     TH1 = 0xfd;     // Load value for 9600 baud --> UART Mode 1 means baud is determined by timer 1's overflow rate 
     REN = HIGH;        // serial port initialization
     EA = HIGH;			// enable interrupts
 	ES = HIGH;			// enable serial port interrupts
+    TR1 = 1; // start timer
 }
 
 void main(void)
 {
-    delay_us(1000);
+    // delay_us(1000);
     setup();
     CLK = LOW; // set clock idle state
-    delay_us(1000);
+    // delay_us(1000);
     wiz_init();
+    udp_open();
 	while (1) {
-    // RX_data();
-
+        // serial_txchar(0x41);
+        serial_txstring("Hello world\n");
     }
 }
