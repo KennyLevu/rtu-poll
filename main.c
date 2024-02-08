@@ -316,9 +316,12 @@ void udp_rx_helper(void)
     uint8_t rxsizu, rxsizl; // stores upper and lower half of rx register size
     uint8_t rx_size = 0x0000;
     uint16_t rx_offset;
-    uint16_t rx_start_addr;
-    uint16_t header_addr;
+    uint16_t *rx_start_addr;
+    uint8_t *header_addr;
     uint16_t upper_size, left_size; // upper size stores uper size of start address, left stores left size of base addr
+    uint8_t peer_ip[4];
+    uint16_t peer_port = 0x0000, data_size = 0x0000;
+
     /* Get rx register size by combinning upper and lower half size values */
     rxsizu = wiz_read(SOCKET0_RXSIZU);
     rxsizl = wiz_read(SOCKET0_RXSIZL);
@@ -332,10 +335,11 @@ void udp_rx_helper(void)
 
     /* Read header information 
         1. Get header address and update start addr
-            - If socket rx memory has overflow then get new overflow header address and update offset addr
+            - If reading header will cause overflow in rx buf, 
+              split read operation into two parts to prevent overwriting data
             OR
             - copy header size bytes of start address to header address
-        2. 
+        2. get remote information and data size from header 
     */
     if ( (rx_offset + UDP_HEADER_SIZE) > (RXTX_MASK + 1) ) {
         // copy upper_size bytes of start_address to header_add
@@ -356,7 +360,16 @@ void udp_rx_helper(void)
     // update start address 
     rx_start_addr = SOCKET0_RX_BASE + rx_offset;
 
-    /* get remote peer information and receive data size*/
+    /* get remote peer information and receive data size from header*/
+    for (int i = 0; i < 4; i++) {
+        peer_ip[i] = header_addr[i];
+    }
+    // get port and size numbers by stitching upper and lower bytes
+    peer_port = peer_port | (header_addr[4] << 8);
+    peer_port = peer_port | header_addr[5];
+    data_size = data_size | (header_addr[6] << 8);
+    data_size = data_size | header_addr[7];
+
 }
 
 void udp_rx(void) 

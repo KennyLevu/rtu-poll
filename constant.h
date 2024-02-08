@@ -23,8 +23,9 @@
 
 // RX Memory Base ADDR from datasheet
 #define SOCKET0_RX_BASE 0x6000 
-// RX Mask = Memory size (4KB - 1) == 0xFFFF - 1
-#define RXTX_MASK 0x0FFF
+/* RX Mask = Memory size (4KB - 1) == 0xFFFF - 1
+ mask helps calculate offset by wrapping the offset value within the register size */
+#define RXTX_MASK 0x0FFF 
 
 #define SOCKET1 0x0500
 #define SOCKET1_COM 0x0501
