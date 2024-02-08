@@ -6,15 +6,20 @@
 #define OP_WRITE 0xf0
 #define OP_READ 0x0f
 
+// IR Interrupt Register (read only)
+#define INTER_REG 0x0015
+#define SOCK0_MSK 0x01 // interrupt mask
 // S0/S1 Registers Scocket n Mode Register
 #define SOCKET0 0x0400 // socket mode
 #define SOCKET0_COM 0x0401 // command register
+#define SOCKET0_IR 0x0402 // Socket n interrupt register
 #define SOCKET0_STAT 0x403 // status register
 #define SOCKET0_PORT_U 0x0404 // upper half port number
 #define SOCKET0_PORT_L 0x0405 // lower half port number
 
 #define SOCKET1 0x0500
 #define SOCKET1_COM 0x0501
+#define SOCKET1_IR 0x0502
 #define SOCKET1_STAT 0x503
 #define SOCKET1_PORT_U 0x0504
 #define SOCKET1_PORT_L 0x0505

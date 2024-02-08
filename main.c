@@ -3,8 +3,12 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include "periph.h"
+// #include "periph.h"
 #include "constant.h"
+#define CS P2_0 // chip select
+#define CLK P2_1 // CLK pin
+#define MISO P2_2
+#define MOSI P2_3
 
 // delay approximately 10us for each count
 void delay_us(unsigned int us_count)
@@ -102,6 +106,7 @@ void wiz_write(uint16_t addr, uint8_t data)
     cmdout_8(OP_WRITE);
     cmdout_16(addr);
     cmdout_8(data);
+    delay10();
     CS = HIGH;
 }
 
@@ -250,12 +255,25 @@ void wiz_init(void)
     bool udp_open = false, tcp_open = false;
     // TODO: config retry time-value register
     // TODO: config retry count register 
-    wiz_write(MODE, 0x80);  // disable indirect bus and pppoe, disable ping block mode, 1 on MSB soft reset
-    wiz_write(IMR, 0xc3);   // disable sockets 3 and 2, PPPoE interrupts | enable ip conflict and desintation unreachable interrupts
+    wiz_write(MODE, 0x10);  // disable indirect bus and pppoe, disable ping block mode, 1 on MSB soft reset
+    wiz_read(MODE);
+    wiz_write(IMR, 0x01);   // disable sockets 3 and 2, PPPoE interrupts | enable ip conflict and desintation unreachable interrupts
+    wiz_read(IMR);
+    wiz_write(GATEWAY_1, 0x7e);
+    wiz_read(GATEWAY_1);
+    wiz_write(GATEWAY_2, 0x0a);
+    wiz_read(GATEWAY_2);
+    wiz_write(GATEWAY_3, 0xdc);
+    wiz_read(GATEWAY_3);
 
+    // wiz_set_gateway(126,10,220,254);   // 126.10.220.254 <---gateway address // 7e.a.dc.fe
+    // wiz_get_gateway();
+
+    // wiz_read(MODE);
+    // wiz_read(IMR);
     /* Config Initial Source Network Settings */
-    wiz_set_gateway(126,10,220,254);   // 126.10.220.254 <---gateway address // 7e.a.dc.fe
-    wiz_get_gateway();
+    // wiz_set_gateway(126,10,220,254);   // 126.10.220.254 <---gateway address // 7e.a.dc.fe
+    // wiz_get_gateway();
     
     
 
@@ -283,7 +301,7 @@ void wiz_init(void)
     // wiz_set_port(0,0x13,0x88); // set socket 0 udp port to 5100 0x1388
     // wiz_set_port(1,0x13,0xec);   // set socket 1 tcp port to 5000 0x13ec
 
-    // /* Initialize UDP Socket*/
+    /* Initialize UDP Socket*/
     // while (udp_open != true) {
     //     wiz_write(SOCKET0_COM, OPEN); // open socket
     //     if (wiz_read(SOCKET0_STAT) != SOCK_UDP) {
@@ -308,6 +326,20 @@ void wiz_init(void)
     //     }
     // } 
 
+}
+
+
+
+void udp_rx_helper(void) {
+
+
+}
+
+void udp_rx(void) {
+    // check the reception interrupt bit is set for socket 0
+    if (wiz_read(SOCKET0_IR) & 0x04) {
+        udp_rx_helper();
+    }
 }
 
 void setup(void)
