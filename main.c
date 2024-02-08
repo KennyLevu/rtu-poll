@@ -252,7 +252,6 @@ void wiz_set_port(uint8_t sock_n, uint8_t hex_upper, uint8_t hex_lower)
 // Initialize network
 void wiz_init(void) 
 {   
-    bool udp_open = false, tcp_open = false;
     // TODO: config retry time-value register
     // TODO: config retry count register 
     wiz_write(MODE, 0x00);  // disable indirect bus and pppoe, disable ping block mode
@@ -297,8 +296,9 @@ void wiz_init(void)
 
 }
 
-void udp_open() 
+void udp_open(void) 
 {
+    bool udp_open = false;
     /* Initialize UDP Socket*/
     while (udp_open != true) {
         wiz_write(SOCKET0_COM, OPEN); // open socket
@@ -314,13 +314,14 @@ void udp_open()
 void udp_rx_helper(void) 
 {
     uint8_t rxsizu, rxsizl; // stores upper and lower half of rx register size
-    uint8_t rx_size = 0x0000;
+    uint16_t rx_size = 0x0000;
     uint16_t rx_offset;
-    uint16_t *rx_start_addr;
-    uint8_t *header_addr;
+    volatile uint8_t *rx_base = (volatile uint8_t *) SOCKET0_RX_BASE;
+    volatile uint8_t *rx_start_addr = NULL;
+    volatile uint8_t *header_addr = NULL;
     uint16_t upper_size, left_size; // upper size stores uper size of start address, left stores left size of base addr
     uint8_t peer_ip[4];
-    uint16_t peer_port = 0x0000, data_size = 0x0000;
+    uint16_t peer_port = 0x0000, data_size = 0x0000, rxrd = 0x0000;
 
     /* Get rx register size by combinning upper and lower half size values */
     rxsizu = wiz_read(SOCKET0_RXSIZU);
@@ -328,10 +329,12 @@ void udp_rx_helper(void)
     rx_size = rx_size | rxsizl;
     rx_size = rx_size | (rxsizu << 8);
 
-    /* Calculate offset address */
-    rx_offset = wiz_read(SOCKET0_RXRD) + RXTX_MASK;
+    /* Calculate offset */
+    rxrd = rxrd | (wiz_read(SOCKET0_RXRDU) << 8);
+    rxrd = rxrd | wiz_read(SOCKET0_RXRDL);
+    rx_offset = rxrd + RXTX_MASK;
     /* Get start (physical) address*/
-    rx_start_addr = SOCKET0_RX_BASE + rx_offset;
+    rx_start_addr = (rx_base + rx_offset);
 
     /* Read header information 
         1. Get header address and update start addr
@@ -349,7 +352,7 @@ void udp_rx_helper(void)
         header_addr += upper_size;
         // copy left size bytes of RX-BASE to header_addr
         left_size = UDP_HEADER_SIZE - upper_size;
-        memcpy(SOCKET0_RX_BASE, header_addr, left_size);
+        memcpy(rx_base, header_addr, left_size);
         // update offset
         rx_offset = left_size;
     }
@@ -358,7 +361,7 @@ void udp_rx_helper(void)
         memcpy(rx_start_addr, header_addr, UDP_HEADER_SIZE);
     }
     // update start address 
-    rx_start_addr = SOCKET0_RX_BASE + rx_offset;
+    rx_start_addr = rx_base + rx_offset;
 
     /* get remote peer information and receive data size from header*/
     for (int i = 0; i < 4; i++) {

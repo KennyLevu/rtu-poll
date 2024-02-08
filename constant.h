@@ -18,8 +18,8 @@
 #define SOCKET0_PORT_L 0x0405 // lower half port number
 #define SOCKET0_RXSIZU 0x0426 // upper half of size of rx register
 #define SOCKET0_RXSIZL 0x0427 // lower half of size of rx register
-#define SOCKET0_RXRD 0x0428 // upper half of read pointer register, shows locations of data
-#define SOCKET0_RXRD 0x0429
+#define SOCKET0_RXRDU 0x0428 // upper half of read pointer register, shows locations of data
+#define SOCKET0_RXRDL 0x0429
 
 // RX Memory Base ADDR from datasheet
 #define SOCKET0_RX_BASE 0x6000 
@@ -35,8 +35,8 @@
 #define SOCKET1_PORT_L 0x0505
 #define SOCKET1_RXSIZU 0x0526
 #define SOCKET1_RXSIZL 0x0527
-#define SOCKET1_RXRD 0x0528
-#define SOCKET1_RXRD 0x0529
+#define SOCKET1_RXRDU 0x0528
+#define SOCKET1_RXRDL 0x0529
 // GAR Register
 #define GATEWAY_1 0x0001
 #define GATEWAY_2 0x0002
