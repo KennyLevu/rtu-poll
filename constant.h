@@ -13,7 +13,7 @@
 #define SOCKET0 0x0400 // socket mode
 #define SOCKET0_COM 0x0401 // command register
 #define SOCKET0_IR 0x0402 // Socket n interrupt register
-#define SOCKET0_STAT 0x403 // status register
+#define SOCKET0_STAT 0x0403 // status register
 #define SOCKET0_PORT_U 0x0404 // upper half port number
 #define SOCKET0_PORT_L 0x0405 // lower half port number
 #define SOCKET0_RXSIZU 0x0426 // upper half of size of rx register
