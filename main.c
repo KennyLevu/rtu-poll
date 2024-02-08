@@ -255,61 +255,30 @@ void wiz_init(void)
     bool udp_open = false, tcp_open = false;
     // TODO: config retry time-value register
     // TODO: config retry count register 
-    wiz_write(MODE, 0x10);  // disable indirect bus and pppoe, disable ping block mode, 1 on MSB soft reset
-    wiz_read(MODE);
+    wiz_write(MODE, 0x00);  // disable indirect bus and pppoe, disable ping block mode
     wiz_write(IMR, 0x01);   // disable sockets 3 and 2, PPPoE interrupts | enable ip conflict and desintation unreachable interrupts
-    wiz_read(IMR);
-    wiz_write(GATEWAY_1, 0x7e);
-    wiz_read(GATEWAY_1);
-    wiz_write(GATEWAY_2, 0x0a);
-    wiz_read(GATEWAY_2);
-    wiz_write(GATEWAY_3, 0xdc);
-    wiz_read(GATEWAY_3);
 
-    // wiz_set_gateway(126,10,220,254);   // 126.10.220.254 <---gateway address // 7e.a.dc.fe
-    // wiz_get_gateway();
-
-    // wiz_read(MODE);
-    // wiz_read(IMR);
     /* Config Initial Source Network Settings */
-    // wiz_set_gateway(126,10,220,254);   // 126.10.220.254 <---gateway address // 7e.a.dc.fe
-    // wiz_get_gateway();
-    
-    
+    wiz_set_gateway(126,10,220,254);   // 126.10.220.254 <---gateway address // 7e.a.dc.fe
+    wiz_set_subnet(255,255,192,0);    // 255.255.192.0 <--- subnet mask // ff.ff.c0.0
+    wiz_set_mac(0x00, 0x08, 0xdc, 0x24, 0x4b, 0x5e); // mac address read as hex
+    wiz_set_ip(126,10,210,10);     // 126.10.218.163 <--- my pc // 126.10.200.0 7e.a.c8.0<--- set mcu
 
-    // wiz_set_subnet(255,255,192,0);    // 255.255.192.0 <--- subnet mask // ff.ff.c0.0
-    // wiz_get_subnet();
-    
-    // wiz_set_mac(0x00, 0x08, 0xdc, 0x24, 0x4b, 0x7e); // mac address read as hex
-    // wiz_get_mac();
 
-    // wiz_set_ip(126,10,200,0);     // 126.10.218.163 <--- my pc // 126.10.200.0 7e.a.c8.0<--- set mcu
-    // wiz_get_ip();
-    // // Divide 8KB of RX memory and 8KB of TX memory over sockets 0 and 1
-    // // Byte representation divided into 4 has 2 bits presenting each socket from greatest to least
-    // // ex. 1100 0000 assigns all memory to socket 3 (11 for 8KB)
-    // wiz_write(RX_MEM_SIZE, 0x0A);  // assign 4kb to s0/s1 each  0000 1010 
-    // wiz_write(TX_MEM_SIZE, 0x0A);   // assign 4kb to s0/s1 each 0000 1010
 
-    
-    // /* Init Sockets 0/1
-    //    Socket 0: UDP 5100 | 4KB RX/TX | No Multicast
-    //    Socket 1: TCP 5000 | 4KB RX/TX | Timeout ACK*/
-    // wiz_write(SOCKET0, 0x02); // set socket 0 to UDP with no multicast
-    // wiz_write(SOCKET1, 0x01); // set socket 1 to TCP with ack on internal timeout
-    // /* Bind sockets to port numbers */
-    // wiz_set_port(0,0x13,0x88); // set socket 0 udp port to 5100 0x1388
-    // wiz_set_port(1,0x13,0xec);   // set socket 1 tcp port to 5000 0x13ec
-
-    /* Initialize UDP Socket*/
-    // while (udp_open != true) {
-    //     wiz_write(SOCKET0_COM, OPEN); // open socket
-    //     if (wiz_read(SOCKET0_STAT) != SOCK_UDP) {
-    //         wiz_write(SOCKET0_COM, CLOSED); // socket not initialized, retry
-    //     } else {
-    //         udp_open = true;
-    //     }
-    // }
+    /* Init Sockets 0/1
+       Socket 0: UDP 5100 | 4KB RX/TX | No Multicast
+       Socket 1: TCP 5000 | 4KB RX/TX | Timeout ACK*/
+    wiz_write(SOCKET0, 0x02); // set socket 0 to UDP with no multicast
+    wiz_write(SOCKET1, 0x01); // set socket 1 to TCP with ack on internal timeout
+    /* Divide 8KB of RX memory and 8KB of TX memory over sockets 0 and 1
+    Byte representation divided into 4 has 2 bits presenting each socket from greatest to least
+    ex. 1100 0000 assigns all memory to socket 3 (11 for 8KB) */
+    wiz_write(RX_MEM_SIZE, 0x0A);  // assign 4kb to s0/s1 each  0000 1010 
+    wiz_write(TX_MEM_SIZE, 0x0A);   // assign 4kb to s0/s1 each 0000 1010
+    /* Bind sockets to port numbers */
+    wiz_set_port(0,0x13,0x88); // set socket 0 udp port to 5100 0x1388
+    wiz_set_port(1,0x13,0xec);   // set socket 1 tcp port to 5000 0x13ec
     
     // /* Initialize TCP Socket*/
     // while (tcp_open != true) {
@@ -328,14 +297,70 @@ void wiz_init(void)
 
 }
 
-
-
-void udp_rx_helper(void) {
-
-
+void udp_open() 
+{
+    /* Initialize UDP Socket*/
+    while (udp_open != true) {
+        wiz_write(SOCKET0_COM, OPEN); // open socket
+        if (wiz_read(SOCKET0_STAT) != SOCK_UDP) {
+            wiz_write(SOCKET0_COM, CLOSED); // socket not initialized, retry
+        } else {
+            udp_open = true;
+        }
+    }
 }
 
-void udp_rx(void) {
+
+void udp_rx_helper(void) 
+{
+    uint8_t rxsizu, rxsizl; // stores upper and lower half of rx register size
+    uint8_t rx_size = 0x0000;
+    uint16_t rx_offset;
+    uint16_t rx_start_addr;
+    uint16_t header_addr;
+    uint16_t upper_size, left_size; // upper size stores uper size of start address, left stores left size of base addr
+    /* Get rx register size by combinning upper and lower half size values */
+    rxsizu = wiz_read(SOCKET0_RXSIZU);
+    rxsizl = wiz_read(SOCKET0_RXSIZL);
+    rx_size = rx_size | rxsizl;
+    rx_size = rx_size | (rxsizu << 8);
+
+    /* Calculate offset address */
+    rx_offset = wiz_read(SOCKET0_RXRD) + RXTX_MASK;
+    /* Get start (physical) address*/
+    rx_start_addr = SOCKET0_RX_BASE + rx_offset;
+
+    /* Read header information 
+        1. Get header address and update start addr
+            - If socket rx memory has overflow then get new overflow header address and update offset addr
+            OR
+            - copy header size bytes of start address to header address
+        2. 
+    */
+    if ( (rx_offset + UDP_HEADER_SIZE) > (RXTX_MASK + 1) ) {
+        // copy upper_size bytes of start_address to header_add
+        upper_size = (RXTX_MASK + 1) - rx_offset;
+        memcpy(rx_start_addr, header_addr, UDP_HEADER_SIZE);
+        // update header_addr
+        header_addr += upper_size;
+        // copy left size bytes of RX-BASE to header_addr
+        left_size = UDP_HEADER_SIZE - upper_size;
+        memcpy(SOCKET0_RX_BASE, header_addr, left_size);
+        // update offset
+        rx_offset = left_size;
+    }
+    else {
+        // copy header size bytes of start addresss to header addr (copy the header)
+        memcpy(rx_start_addr, header_addr, UDP_HEADER_SIZE);
+    }
+    // update start address 
+    rx_start_addr = SOCKET0_RX_BASE + rx_offset;
+
+    /* get remote peer information and receive data size*/
+}
+
+void udp_rx(void) 
+{
     // check the reception interrupt bit is set for socket 0
     if (wiz_read(SOCKET0_IR) & 0x04) {
         udp_rx_helper();

@@ -16,6 +16,15 @@
 #define SOCKET0_STAT 0x403 // status register
 #define SOCKET0_PORT_U 0x0404 // upper half port number
 #define SOCKET0_PORT_L 0x0405 // lower half port number
+#define SOCKET0_RXSIZU 0x0426 // upper half of size of rx register
+#define SOCKET0_RXSIZL 0x0427 // lower half of size of rx register
+#define SOCKET0_RXRD 0x0428 // upper half of read pointer register, shows locations of data
+#define SOCKET0_RXRD 0x0429
+
+// RX Memory Base ADDR from datasheet
+#define SOCKET0_RX_BASE 0x6000 
+// RX Mask = Memory size (4KB - 1) == 0xFFFF - 1
+#define RXTX_MASK 0x0FFF
 
 #define SOCKET1 0x0500
 #define SOCKET1_COM 0x0501
@@ -23,7 +32,10 @@
 #define SOCKET1_STAT 0x503
 #define SOCKET1_PORT_U 0x0504
 #define SOCKET1_PORT_L 0x0505
-
+#define SOCKET1_RXSIZU 0x0526
+#define SOCKET1_RXSIZL 0x0527
+#define SOCKET1_RXRD 0x0528
+#define SOCKET1_RXRD 0x0529
 // GAR Register
 #define GATEWAY_1 0x0001
 #define GATEWAY_2 0x0002
@@ -65,9 +77,13 @@
 
 // RX Memory Size RMSR
 #define RX_MEM_SIZE 0x001a 
+
+
 // TX Memory Size TMSR
 #define TX_MEM_SIZE 0x001b
 
+// UDP Header Size 8 bytes
+#define UDP_HEADER_SIZE 0x400
 
 /* SOCKET STATUS COMMANDS */
 #define SOCK_CLOSED 0X00
