@@ -84,7 +84,7 @@
 #define TX_MEM_SIZE 0x001b
 
 // UDP Header Size 8 bytes
-#define UDP_HEADER_SIZE 0x400
+#define UDP_HEADER_SIZE 8
 
 /* SOCKET STATUS COMMANDS */
 #define SOCK_CLOSED 0X00
