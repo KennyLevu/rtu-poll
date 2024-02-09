@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdio.h>
 // #include "periph.h"
 #include "constant.h"
 #define CS P2_0 // chip select
@@ -157,22 +158,6 @@ void wiz_get_gateway(void)
     gateway[2] = (char)wiz_read(GATEWAY_2);
     gateway[4] = (char)wiz_read(GATEWAY_3);
     gateway[6] = (char)wiz_read(GATEWAY_4);
-    // serial_txchar(gateway);
-    // serial_txstring(gateway);
-    // serial_txchar((char)gateway[0]);
-    //     serial_txchar('\n');
-    // serial_txchar((char)0xdc);
-    //     serial_txchar('\n');
-    // serial_txchar((char)wiz_read(GATEWAY_2));
-    //     serial_txchar('\n');
-    // serial_txchar((char)gateway[2]);
-    //     serial_txchar('\n');
-
-    // serial_txchar((char)gateway[4]);
-    //     serial_txchar('\n');
-    // serial_txchar((char)gateway[6]);
-    // serial_txchar('\n');
-    // serial_txstring("test");
 }
 
 // prints ip addr to serial
@@ -275,8 +260,8 @@ void wiz_init(void)
 
 
     /* Init Sockets 0/1
-       Socket 0: UDP 5100 | 4KB RX/TX | No Multicast
-       Socket 1: TCP 5000 | 4KB RX/TX | Timeout ACK*/
+       Socket 0: UDP 5000 | 4KB RX/TX | No Multicast
+       Socket 1: TCP 5100 | 4KB RX/TX | Timeout ACK*/
     wiz_write(SOCKET0, 0x02); // set socket 0 to UDP with no multicast
     wiz_write(SOCKET1, 0x01); // set socket 1 to TCP with ack on internal timeout
     /* Divide 8KB of RX memory and 8KB of TX memory over sockets 0 and 1
@@ -285,10 +270,8 @@ void wiz_init(void)
     wiz_write(RX_MEM_SIZE, 0x0A);  // assign 4kb to s0/s1 each  0000 1010 
     wiz_write(TX_MEM_SIZE, 0x0A);   // assign 4kb to s0/s1 each 0000 1010
     /* Bind sockets to port numbers */
-    wiz_set_port(0,0x13,0x88); // set socket 0 udp port to 5100 0x1388
-    // wiz_set_port(0,0x36,0x39); // set socket 0 udp port to 5100 0x1388
-
-    wiz_set_port(1,0x13,0xec);   // set socket 1 tcp port to 5000 0x13ec
+    wiz_set_port(0,0x13,0x88); // set socket 0 udp port to 5000 0x1388
+    wiz_set_port(1,0x13,0xec);   // set socket 1 tcp port to 5100 0x13ec
 
     
     // /* Initialize TCP Socket*/
@@ -315,13 +298,10 @@ void udp_open(void)
     while (udp_open == false) {
         // serial_txstring("still trying");
         wiz_write(SOCKET0_COM, OPEN); // open socket
-        // status = wiz_read(SOCKET0_STAT);
-        // serial_txchar(status);
-        // serial_txchar('\n');
         if (wiz_read(SOCKET0_STAT) != SOCK_UDP) {
             wiz_write(SOCKET0_COM, CLOSED); // socket not initialized, retry
         } else {
-            serial_txstring("UDP Socket 0 port 5100 open");
+            serial_txstring("UDP Socket 0 port 5000 open\n");
             udp_open = true;
         }
     }
@@ -330,6 +310,7 @@ void udp_open(void)
 
 void udp_rx_helper(void) 
 {
+    serial_txstring("Reception detected\n");
     uint8_t rxsizu, rxsizl; // stores upper and lower half of rx register size
     uint16_t rx_size = 0x0000;
     uint16_t rx_offset;
@@ -340,7 +321,6 @@ void udp_rx_helper(void)
     uint8_t peer_ip[4];
     uint16_t peer_port = 0x0000, data_size = 0x0000, rxrd = 0x0000;
     uint8_t *mydata;
-
 
     /* Get rx register size by combinning upper and lower half size values */
     rxsizu = wiz_read(SOCKET0_RXSIZU);
@@ -385,6 +365,7 @@ void udp_rx_helper(void)
     /* get remote peer information and receive data size from header*/
     for (int i = 0; i < 4; i++) {
         peer_ip[i] = header_addr[i];
+        // serial_txchar(peer_ip[i]);
     }
     // get port and size numbers by stitching upper and lower bytes
     peer_port = peer_port | (header_addr[4] << 8);
@@ -392,7 +373,8 @@ void udp_rx_helper(void)
     data_size = data_size | (header_addr[6] << 8);
     data_size = data_size | header_addr[7];
 
-    mydata = (uint8_t *) malloc(data_size);
+
+    mydata = (uint8_t *) malloc(data_size/sizeof(uint8_t));
     /* Read Data
         1. Check if data size overflows rx buffer
             - Read data in two parts
@@ -408,17 +390,24 @@ void udp_rx_helper(void)
         memcpy(rx_start_addr, mydata, data_size);
     }
     // received data
+    serial_txstring(mydata);
+    serial_txchar('\n');
     free(mydata);
+
+    /* increase Sn_RX_RD as length of data_size+header_size */
+    data_size += UDP_HEADER_SIZE;
+    wiz_write(SOCKET0_RXRDU, ((data_size & 0xff00) >> 8));
+    wiz_write(SOCKET0_RXRDL, (data_size&0xff));
+
     wiz_write(SOCKET0_COM, RECV);
 
 }
 
 void udp_rx(void) 
 {
-    serial_txstring("Reception detected\n");
-    // check the reception interrupt bit is set for socket 0
-    if (wiz_read(SOCKET0_IR)) {
-        serial_txstring("Reception detected\n");
+    if (wiz_read(SOCKET0_IR) & 0x04) {
+        // clear interrupt
+        wiz_write(SOCKET0_IR, 1);
         udp_rx_helper();
     }
 }
@@ -444,8 +433,5 @@ void main(void)
     udp_open();
 	while (1) {
         udp_rx();
-        // if (wiz_read(SOCKET0_STAT) == SOCK_UDP) {
-        //     serial_txstring("UDP Socket 0 port 5100 open");
-        // }
     }
 }
