@@ -8,3 +8,5 @@
 *.sym
 *.asm
 *.lk
+*.rel
+*.ihx
