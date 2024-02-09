@@ -88,7 +88,7 @@ void serial_ln(void) {
         TI = 0;   
 }
 void serial_tab(void) {
-    SBUF='\n';
+    SBUF='\t';
     while(TI == 0);
         TI = 0;   
 }
@@ -366,8 +366,7 @@ void udp_rx_helper(void)
     uint16_t rx_base = SOCKET0_RX_BASE; // pointer to base address of rx register
     uint16_t rx_size = 0x0000;
     uint8_t buf_header[8] = {0};
-    uint16_t peer_port;
-    uint16_t data_size;
+    uint8_t peer_ip[4] = {0};
     char num[5] = {'\0'};
 
     /* Get rx register size by combinning upper and lower half size values */
@@ -375,8 +374,8 @@ void udp_rx_helper(void)
     rxsizl = wiz_read(SOCKET0_RXSIZL);
     rx_size = rx_size | rxsizl;
     rx_size = rx_size | (rxsizu << 8);
-    serial_txstring("RX Size: ");
-    serial_txnum(rx_size);
+    // serial_txstring("RX Size: ");
+    // serial_txnum(rx_size);
     
 
     /* Calculate offset */
@@ -388,20 +387,20 @@ void udp_rx_helper(void)
     // serial_txstring("\t rxrd: ");
     // serial_txnum(rxrd);
 
-    serial_txstring("\t rxrd: ");
-    serial_txnum(rxrd);
+    // serial_txstring("\t rxrd: ");
+    // serial_txnum(rxrd);
 
-    serial_txstring("\t Mask: ");
-    serial_txnum(RXTX_MASK);
+    // serial_txstring("\t Mask: ");
+    // serial_txnum(RXTX_MASK);
     rx_offset = rxrd & RXTX_MASK;
 
-     serial_txstring("\t Offset: ");
-    serial_txnum(RXTX_MASK);
+    // serial_txstring("\t Offset: ");
+    // serial_txnum(RXTX_MASK);
     
     /* Get start (physical) address*/
     rx_start_addr = SOCKET0_RX_BASE + rx_offset;
-    serial_txstring("\t start_addr: ");
-    serial_txnum(rx_start_addr);
+    // serial_txstring("\t start_addr: ");
+    // serial_txnum(rx_start_addr);
 
     /* Read header information 
             Header size is 8 bytes
@@ -413,7 +412,7 @@ void udp_rx_helper(void)
         2. get remote information and data size from header 
     */
     if ( (rx_offset + UDP_HEADER_SIZE) > (RXTX_MASK + 1) ) {
-        serial_txstring("\nover flow\n");
+        serial_txstring("\nHeader Overflow Detected\n");
 
         // copy upper_size bytes of start_address to header
         upper_size = (RXTX_MASK + 1) - rx_offset;
@@ -425,40 +424,38 @@ void udp_rx_helper(void)
         rx_offset = left_size;
     }
     else {
-        serial_txstring("No overflow\n");
-
         // copy header size bytes of start addresss to header addr (copy the header)
         wiz_read_buf(rx_start_addr, 8, buf_header);
-
     }
+    /* get remote peer information and receive data size from header*/
+    // get port and size numbers by stitching upper and lower bytes
+    peer_port = peer_port | (buf_header[4] << 8);
+    peer_port = peer_port | buf_header[5];
+    data_size = data_size | (buf_header[6] << 8);
+    data_size = data_size | buf_header[7];
 
     serial_txstring("Sender IP: ");
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 4; i++) {
+        peer_ip[i] = buf_header[i];
         serial_txnum(buf_header[i]);
         if (i < 3) {
             serial_txchar('.');
         }
     }
     serial_tab();
-    serial_txstring(buf_header);
+    serial_txstring("Sender Port: ");
+    serial_txnum(peer_port);
+    serial_tab();
+    serial_txstring("Data Size: ");
+    serial_txnum(data_size);
     serial_ln();
     return;
 
     // update start address 
     rx_start_addr = SOCKET0_RX_BASE + rx_offset;
 
-    /* get remote peer information and receive data size from header*/
-    for (int i = 0; i < 4; i++) {
-        byte_to_ascii(buf_header[i], num);        
-        serial_txstring(num);
-    }
-
     return;
-    // get port and size numbers by stitching upper and lower bytes
-    // peer_port = peer_port | (buf_header[4] << 8);
-    // peer_port = peer_port | buf_header[5];
-    // data_size = data_size | (buf_header[6] << 8);
-    // data_size = data_size | buf_header[7];
+    
 
 
     // /* Read Data
