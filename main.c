@@ -87,6 +87,11 @@ void serial_ln(void) {
     while(TI == 0);
         TI = 0;   
 }
+void serial_tab(void) {
+    SBUF='\n';
+    while(TI == 0);
+        TI = 0;   
+}
 
 void serial_txstring(char *string_ptr)
 {
@@ -344,7 +349,7 @@ void udp_open(void)
 }
 
 // Read data buffer from wiznet address
-void wiz_read_buf(uint8_t addr, uint16_t len, uint8_t *buffer) 
+void wiz_read_buf(uint16_t addr, uint16_t len, uint8_t *buffer) 
 {
     for (int i = 0; i < len; i++) {
         buffer[i] = wiz_read(addr + i);
@@ -360,7 +365,9 @@ void udp_rx_helper(void)
     uint16_t peer_port = 0x0000, data_size = 0x0000, rxrd = 0x0000;
     uint16_t rx_base = SOCKET0_RX_BASE; // pointer to base address of rx register
     uint16_t rx_size = 0x0000;
-    uint8_t buf_header[8];
+    uint8_t buf_header[8] = {0};
+    uint16_t peer_port;
+    uint16_t data_size;
     char num[5] = {'\0'};
 
     /* Get rx register size by combinning upper and lower half size values */
@@ -397,6 +404,7 @@ void udp_rx_helper(void)
     serial_txnum(rx_start_addr);
 
     /* Read header information 
+            Header size is 8 bytes
         1. Get header address and update start addr
             - If reading header will cause overflow in rx buf, 
               split read operation into two parts to prevent overwriting data
@@ -405,7 +413,7 @@ void udp_rx_helper(void)
         2. get remote information and data size from header 
     */
     if ( (rx_offset + UDP_HEADER_SIZE) > (RXTX_MASK + 1) ) {
-        // serial_txstring("\nover flow\n");
+        serial_txstring("\nover flow\n");
 
         // copy upper_size bytes of start_address to header
         upper_size = (RXTX_MASK + 1) - rx_offset;
@@ -420,16 +428,19 @@ void udp_rx_helper(void)
         serial_txstring("No overflow\n");
 
         // copy header size bytes of start addresss to header addr (copy the header)
-        wiz_read_buf(rx_start_addr, UDP_HEADER_SIZE, buf_header);
+        wiz_read_buf(rx_start_addr, 8, buf_header);
 
     }
-    for (int i = 0; i < 4; i++) {
+
+    serial_txstring("Sender IP: ");
+    for (int i = 0; i < 6; i++) {
         serial_txnum(buf_header[i]);
         if (i < 3) {
             serial_txchar('.');
         }
     }
-
+    serial_tab();
+    serial_txstring(buf_header);
     serial_ln();
     return;
 
@@ -444,10 +455,10 @@ void udp_rx_helper(void)
 
     return;
     // get port and size numbers by stitching upper and lower bytes
-    peer_port = peer_port | (buf_header[4] << 8);
-    peer_port = peer_port | buf_header[5];
-    data_size = data_size | (buf_header[6] << 8);
-    data_size = data_size | buf_header[7];
+    // peer_port = peer_port | (buf_header[4] << 8);
+    // peer_port = peer_port | buf_header[5];
+    // data_size = data_size | (buf_header[6] << 8);
+    // data_size = data_size | buf_header[7];
 
 
     // /* Read Data
