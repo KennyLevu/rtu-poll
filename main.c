@@ -43,26 +43,48 @@ void delay10(void) {
 //     RI = 0;
 //     return(chr);
 // }
-
+void byte_to_ascii(uint16_t num, char *ascii_str) 
+{
+    // Convert each digit to its ASCII representation
+     if (num >= 1000) {
+        ascii_str[0] = '0' + (num / 1000);  // Thousands place
+        ascii_str[1] = '0' + ((num / 100) % 10);  // Hundreds place
+        ascii_str[2] = '0' + ((num / 10) % 10);  // Tens place
+        ascii_str[3] = '0' + (num % 10);  // Ones place
+        ascii_str[4] = '\0';  // Null-terminate the string
+    }
+    else if (num >= 100) {
+        ascii_str[0] = '0' + (num / 100);
+        ascii_str[1] = '0' + ((num / 10) % 10);
+        ascii_str[2] = '0' + (num % 10);
+        ascii_str[3] = '\0';
+    } else if (num >= 10) {
+        ascii_str[0] = '0' + (num / 10);
+        ascii_str[1] = '0' + (num % 10);
+        ascii_str[2] = '\0';
+    } else {
+        ascii_str[0] = '0' + num;
+        ascii_str[1] = '\0';
+    }
+}
 void serial_txchar(char ch)
 {
     SBUF=ch;       // Load the data to be transmitted
-    while(TI==0);    // Wait till the data is trasmitted
-        TI=0;         //Clear the flag for next cycle.
+    while(TI == 0);    // Wait till the data is trasmitted
+        TI = 0;         //Clear the flag for next cycle.
 }
-
-void serial_txint(unsigned int in)
-{
-    SBUF=in;       // Load the data to be transmitted
-    while(TI==0);    // Wait till the data is trasmitted
-        TI=0;         //Clear the flag for next cycle.
-}
-
 
 void serial_txstring(char *string_ptr)
- {
+{
           while(*string_ptr)
            serial_txchar(*string_ptr++);
+}
+
+void serial_txnum(uint16_t val)
+{
+    char num[5] = {'\0'};
+    byte_to_ascii(val, num);
+    serial_txstring(num);
 }
 
 unsigned char RX_data(void)
@@ -307,33 +329,43 @@ void udp_open(void)
     }
 }
 
+// Read data buffer from wiznet address
+void wiz_read_buf(uint8_t addr, uint16_t len, uint8_t *buffer) 
+{
+    for (int i = 0; i < len; i++) {
+        buffer[i] = wiz_read(addr + i);
+    }
+}
+
 
 void udp_rx_helper(void) 
 {
     serial_txstring("Reception detected\n");
+    uint16_t rx_offset, rx_start_addr, upper_size, left_size; // upper size stores uper size of start address, left stores left size of base addr
     uint8_t rxsizu, rxsizl; // stores upper and lower half of rx register size
-    uint16_t rx_size = 0x0000;
-    uint16_t rx_offset;
-    volatile uint8_t *rx_base = (volatile uint8_t *) SOCKET0_RX_BASE; // pointer to base address of rx register
-    volatile uint8_t *rx_start_addr = NULL;
-    volatile uint8_t *header_addr = NULL;
-    uint16_t upper_size, left_size; // upper size stores uper size of start address, left stores left size of base addr
-    uint8_t peer_ip[4];
     uint16_t peer_port = 0x0000, data_size = 0x0000, rxrd = 0x0000;
-    uint8_t *mydata;
+    uint16_t rx_base = SOCKET0_RX_BASE; // pointer to base address of rx register
+    uint16_t rx_size = 0x0000;
+    uint8_t buf_header[8];
+    char num[5] = {'\0'};
 
     /* Get rx register size by combinning upper and lower half size values */
     rxsizu = wiz_read(SOCKET0_RXSIZU);
     rxsizl = wiz_read(SOCKET0_RXSIZL);
     rx_size = rx_size | rxsizl;
     rx_size = rx_size | (rxsizu << 8);
+    serial_txstring("RX Size: ");
+    serial_txnum(rx_size);
+    serial_txchar('\n');
+    return;
 
     /* Calculate offset */
     rxrd = rxrd | (wiz_read(SOCKET0_RXRDU) << 8);
     rxrd = rxrd | wiz_read(SOCKET0_RXRDL);
+    
     rx_offset = rxrd + RXTX_MASK;
     /* Get start (physical) address*/
-    rx_start_addr = (volatile uint8_t *)(SOCKET0_RX_BASE + rx_offset);
+    rx_start_addr = SOCKET0_RX_BASE + rx_offset;
 
     /* Read header information 
         1. Get header address and update start addr
@@ -344,55 +376,54 @@ void udp_rx_helper(void)
         2. get remote information and data size from header 
     */
     if ( (rx_offset + UDP_HEADER_SIZE) > (RXTX_MASK + 1) ) {
-        // copy upper_size bytes of start_address to header_add
+        serial_txstring("over flow\n");
+
+        // copy upper_size bytes of start_address to header
         upper_size = (RXTX_MASK + 1) - rx_offset;
-        memcpy(rx_start_addr, header_addr, UDP_HEADER_SIZE);
-        // update header_addr
-        header_addr += upper_size;
-        // copy left size bytes of RX-BASE to header_addr
+        wiz_read_buf(rx_start_addr, upper_size, buf_header);
+        // copy left size bytes of RX-BASE to header
         left_size = UDP_HEADER_SIZE - upper_size;
-        memcpy(rx_base, header_addr, left_size);
+        wiz_read_buf(rx_base, left_size, buf_header + (upper_size - 1));
         // update offset
         rx_offset = left_size;
     }
     else {
+        serial_txstring("No overflow\n");
+
         // copy header size bytes of start addresss to header addr (copy the header)
-        memcpy(rx_start_addr, header_addr, UDP_HEADER_SIZE);
+        wiz_read_buf(rx_start_addr, UDP_HEADER_SIZE, buf_header);
     }
     // update start address 
-    rx_start_addr =  (volatile uint8_t *)(SOCKET0_RX_BASE + rx_offset);
+    rx_start_addr = SOCKET0_RX_BASE + rx_offset;
 
     /* get remote peer information and receive data size from header*/
     for (int i = 0; i < 4; i++) {
-        peer_ip[i] = header_addr[i];
-        // serial_txchar(peer_ip[i]);
+        byte_to_ascii(buf_header[i], num);        
+        serial_txstring(num);
     }
+
+    return;
     // get port and size numbers by stitching upper and lower bytes
-    peer_port = peer_port | (header_addr[4] << 8);
-    peer_port = peer_port | header_addr[5];
-    data_size = data_size | (header_addr[6] << 8);
-    data_size = data_size | header_addr[7];
+    peer_port = peer_port | (buf_header[4] << 8);
+    peer_port = peer_port | buf_header[5];
+    data_size = data_size | (buf_header[6] << 8);
+    data_size = data_size | buf_header[7];
 
 
-    mydata = (uint8_t *) malloc(data_size/sizeof(uint8_t));
-    /* Read Data
-        1. Check if data size overflows rx buffer
-            - Read data in two parts
-            */
-    if( (rx_offset + data_size) > (RXTX_MASK + 1) ) {
-        upper_size = (RXTX_MASK + 1) - rx_offset;
-        memcpy(rx_start_addr, mydata, upper_size);
-        mydata += upper_size;
-        left_size = data_size - upper_size;
-        memcpy(rx_base, mydata, left_size);
-    }
-    else {
-        memcpy(rx_start_addr, mydata, data_size);
-    }
-    // received data
-    serial_txstring(mydata);
-    serial_txchar('\n');
-    free(mydata);
+    // /* Read Data
+    //     1. Check if data size overflows rx buffer
+    //         - Read data in two parts
+    //         */
+    // if( (rx_offset + data_size) > (RXTX_MASK + 1) ) {
+    //     upper_size = (RXTX_MASK + 1) - rx_offset;
+    //     memcpy(rx_start_addr, mydata, upper_size);
+    //     mydata += upper_size;
+    //     left_size = data_size - upper_size;
+    //     memcpy(rx_base, mydata, left_size);
+    // }
+    // else {
+    //     memcpy(rx_start_addr, mydata, data_size);f
+    // }
 
     /* increase Sn_RX_RD as length of data_size+header_size */
     data_size += UDP_HEADER_SIZE;
@@ -405,7 +436,7 @@ void udp_rx_helper(void)
 
 void udp_rx(void) 
 {
-    if (wiz_read(SOCKET0_IR) & 0x04) {
+    if (wiz_read(SOCKET0_IR) & 0x04) { // check for Recv interrupt (bit 2/ 100 / x04)
         // clear interrupt
         wiz_write(SOCKET0_IR, 1);
         udp_rx_helper();
@@ -431,6 +462,7 @@ void main(void)
     // delay_us(1000);
     wiz_init();
     udp_open();
+    serial_txstring("Why\n");
 	while (1) {
         udp_rx();
     }
