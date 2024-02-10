@@ -1,7 +1,11 @@
 #include <8051.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include "periph.h"
 #include "constant.h"
+#include "serial.h"
 #include "wiz.h"
 
 // char getCharacter (void)
@@ -16,7 +20,26 @@
 //     RI = 0;
 //     return(chr);
 // }
+// delay approximately 10us for each count
+void delay_us(unsigned int us_count)
+ {  
+    while(us_count!=0)
+      {
+         us_count--;
+       }
+}
 
+// delay approx 10us
+void delay10(void) 
+{
+    // formula to calculate timer delay: https://www.electronicshub.org/delay-using-8051-timers/
+    TH0 = 0xFF;
+    TL0 = 0xF6;
+    TR0 = 1; // timer 0 start
+    while (TF0 == 0); // check overflow condition
+    TR0 = 0;    // Stop Timer
+    TF0 = 0;   // Clear flag
+}
 
 
 void byte_to_ascii(uint16_t num, char *ascii_str) 

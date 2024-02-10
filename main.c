@@ -8,26 +8,6 @@
 #include "serial.h"
 #include "wiz.h"
 
-// delay approximately 10us for each count
-void delay_us(unsigned int us_count)
- {  
-    while(us_count!=0)
-      {
-         us_count--;
-       }
-}
-
-// delay approx 10us
-void delay10(void) {
-    // formula to calculate timer delay: https://www.electronicshub.org/delay-using-8051-timers/
-    TH0 = 0xFF;
-    TL0 = 0xF6;
-    TR0 = 1; // timer 0 start
-    while (TF0 == 0); // check overflow condition
-    TR0 = 0;    // Stop Timer
-    TF0 = 0;   // Clear flag
-}
-
 // Initialize network
 void wiz_init(void) 
 {   
