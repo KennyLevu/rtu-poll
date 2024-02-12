@@ -1,8 +1,8 @@
 #ifndef WIZ_H
 #define WIZ_H
 #include <stdint.h>
-void serial_txreg(uint16_t addr);
-void serial_tx2reg(uint16_t upper, uint16_t lower);
+// void serial_txreg(uint16_t addr);
+// void serial_tx2reg(uint16_t upper, uint16_t lower);
 void cmdout_16(uint16_t command);
 void cmdout_8(uint8_t command);
 void wiz_write(uint16_t addr, uint8_t data);

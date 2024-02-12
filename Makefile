@@ -12,25 +12,25 @@ STCGAL_PORT = COM8
 STCGAL_PARAMS = -P stc89 -o cpu_6t_enabled=true
 
 # Source files and target
-SRC = main.c
+SRC = main.c serial.c wiz.c
 TARGET = main
 
 # Header files
-HEADERS = periph.h constant.h serial.h wiz.h
+HEADERS = serial.h wiz.h periph.h constant.h
 
-# Object files for headers
-HEADER_OBJS = $(HEADERS:.h=.rel)
+# Object files
+OBJ = $(SRC:.c=.rel)
 
 # Default target
 all:	$(TARGET).ihx
 		make flash
 
 # Compile source files
-$(TARGET).ihx:  $(SRC)	$(HEADER_OBJS)
-	$(SDCC)		$(SDCC_FLAGS)	$(SRC)
+$(TARGET).ihx:	$(OBJ)
+	$(SDCC)		$(SDCC_FLAGS)	$(OBJ)
 
 # Compile header files
-%.rel:	%.c
+%.rel:	%.c	$(HEADERS)
 	$(SDCC)	$(SDCC_FLAGS)	-c	$<
 
 # Flash the compiled binary using STCGAL

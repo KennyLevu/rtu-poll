@@ -2,23 +2,11 @@
 #include <stdint.h>
 #include "periph.h"
 #include "constant.h"
-#include "serial.c"
-void serial_txreg(uint16_t addr)
-{
-    serial_txnum(wiz_read(addr));
-    serial_ln();
-}
+// #include "serial.c"
 
-void serial_tx2reg(uint16_t upper, uint16_t lower)
-{
-    uint16_t combined = 0x0000; 
-    uint8_t up = wiz_read(upper);
-    uint8_t lo = wiz_read(lower);
-    combined = combined | lo;
-    combined = combined | (up << 8);
-    serial_txnum(combined);
-    serial_ln();
-}
+// void serial_ln(void);
+// void serial_txnum(uint16_t val);
+
 
 // write bytes to MOSI 
 void cmdout_16(uint16_t command) 
@@ -192,3 +180,20 @@ void wiz_read_buf(uint16_t addr, uint16_t len, uint8_t *buffer)
         buffer[i] = wiz_read(addr + i);
     }
 }
+
+// void serial_txreg(uint16_t addr)
+// {
+//     serial_txnum(wiz_read(addr));
+//     serial_ln();
+// }
+
+// void serial_tx2reg(uint16_t upper, uint16_t lower)
+// {
+//     uint16_t combined = 0x0000; 
+//     uint8_t up = wiz_read(upper);
+//     uint8_t lo = wiz_read(lower);
+//     combined = combined | lo;
+//     combined = combined | (up << 8);
+//     serial_txnum(combined);
+//     serial_ln();
+// }

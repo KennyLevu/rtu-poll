@@ -5,8 +5,6 @@
 #include <stdio.h>
 #include "periph.h"
 #include "constant.h"
-#include "serial.h"
-#include "wiz.h"
 
 // char getCharacter (void)
 // {

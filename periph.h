@@ -1,5 +1,6 @@
 #ifndef PERIPH_H
 #define PERIPH_H
+#include "8051.h"
 #define CS P2_0 // chip select
 #define CLK P2_1 // CLK pin
 #define MISO P2_2

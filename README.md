@@ -5,8 +5,8 @@ Compile C files using sdcc
 Using Funduino Mini Wiznet 5100
 
 The ﬁrst two ﬁles will need to be compiled separately with the commands:
-sdcc -c --model-small main.h
-sdcc -c --model-small main.h
+sdcc -c --model-small main1.c
+sdcc -c --model-small main2.c
 Then compile the source ﬁle containing the main() function and link the ﬁles together with the following command:
 sdcc --model-small main.c i2c.rel lcd.rel 
 

@@ -8,6 +8,23 @@
 #include "serial.h"
 #include "wiz.h"
 
+void serial_txreg(uint16_t addr)
+{
+    serial_txnum(wiz_read(addr));
+    serial_ln();
+}
+
+void serial_tx2reg(uint16_t upper, uint16_t lower)
+{
+    uint16_t combined = 0x0000; 
+    uint8_t up = wiz_read(upper);
+    uint8_t lo = wiz_read(lower);
+    combined = combined | lo;
+    combined = combined | (up << 8);
+    serial_txnum(combined);
+    serial_ln();
+}
+
 // Initialize network
 void wiz_init(void) 
 {   
@@ -40,7 +57,7 @@ void wiz_init(void)
     wiz_set_port(1,0x13,0xec);   // set socket 1 tcp port to 5100 0x13ec
 
     
-    // /* Initialize TCP Socket*/
+    /* Initialize TCP Socket*/
     // while (tcp_open != true) {
     //     wiz_write(SOCKET1_COM, OPEN);
     //     if (wiz_read(SOCKET1_STAT) != SOCK_INIT) {
@@ -257,22 +274,22 @@ void setup(void)
 
 void main(void)
 {
-    // delay_us(1000);
-    wiz_write(SOCKET0_RXRDU, 0xfe);
-        wiz_write(SOCKET0_RXRDL, 0xd);
-    setup();
+    delay_us(1000);
+    // wiz_write(SOCKET0_RXRDU, 0xfe);
+        // wiz_write(SOCKET0_RXRDL, 0xd);
+    // setup();
     CLK = LOW; // set clock idle state
     // delay_us(1000);
     
-    wiz_init();
+    // wiz_init();
     // udp_open();
 	while (1) {
-        wiz_write(SOCKET0_PORT_L, 0xfe);
-        wiz_read(SOCKET0_PORT_L);
+        // wiz_write(SOCKET0_PORT_L, 0xfe);
+        // wiz_read(SOCKET0_PORT_L);
         // wiz_write(SOCKET0_RXRDU, 0xfe);
         // wiz_write(SOCKET0_RXRDL, 0xd);
-        wiz_read(SOCKET0_RXRDU);
-        wiz_read(SOCKET0_RXRDL);
+        // wiz_read(SOCKET0_RXRDU);
+        // wiz_read(SOCKET0_RXRDL);
         // serial_tx2reg(SOCKET0_RXRDU, SOCKET0_RXRDL);
         // udp_rx();
     }
