@@ -118,6 +118,9 @@ void udp_rx_helper(void)
 
     rxrd = rxrd | (wiz_read(SOCKET0_RXRDU) << 8);
     rxrd = rxrd | wiz_read(SOCKET0_RXRDL);
+    serial_txstring("\t RXRD OLD: ");
+    serial_txnum(rxrd);
+    serial_ln();
     rx_offset = rxrd & RXTX_MASK;
 
     /* Get start (physical) address*/
@@ -203,7 +206,7 @@ void udp_rx_helper(void)
     // }
     /* increase Sn_RX_RD as length of data_size+header_size */
     rxrd += rx_size;
-    rxrd += UDP_HEADER_SIZE;
+    // rxrd += UDP_HEADER_SIZE;
 
     serial_txstring("\tcomputed rxrd: ");
     serial_txnum(rxrd);
@@ -224,8 +227,9 @@ void udp_rx_helper(void)
     // Set received command
     wiz_write(SOCKET0_COM, RECV);
     serial_tx2reg(SOCKET0_RXRDU, SOCKET0_RXRDL);
+    wiz_write(SOCKET0_IR, 0xff);
     serial_txstring("\tInterrupt reg: ");
-    wiz_write(SOCKET0_IR, 1);
+    // wiz_write(SOCKET0_IR, 1);
     serial_txreg(SOCKET0_IR);
     free(peer_data);
 }
@@ -234,7 +238,7 @@ void udp_rx(void)
 {
     if (wiz_read(SOCKET0_IR) & 0x04) { // check for Recv interrupt (bit 2/ 100 / x04)
         // clear interrupt
-        wiz_write(SOCKET0_IR, 1);
+        // wiz_write(SOCKET0_IR, 1);
         udp_rx_helper();
     }
 }
