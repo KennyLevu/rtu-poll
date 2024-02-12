@@ -221,7 +221,38 @@ void udp_rx(void)
         udp_rx_helper();
     }
 }
+void udp_tx(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint8_t ip4, uint16_t port)
+{
+    uint16_t tx_free = 0x0000, txwr = 0x0000; 
+    uint16_t tx_offset, tx_start_addr;
+    uint16_t data_size;
 
+    /* Get free TX Memory size */
+    tx_free = tx_free | (wiz_read(SOCKET0_TXFSU) << 8);
+    tx_free = tx_free | wiz_read(SOCKET0_TXFSL);
+
+    /* Set destination ip,port */
+    wiz_write(SOCKET0_DIP1, ip1);
+    wiz_write(SOCKET0_DIP2, ip2);
+    wiz_write(SOCKET0_DIP3, ip3);
+    wiz_write(SOCKET0_DIP4, ip4);
+    wiz_write(SOCKET0_DPORU, (port >> 8) & 0xff);
+    wiz_write(SOCKET0_DPORL, port & 0xff);
+
+    /* Calculate offset from write pointer*/
+    txwr = txwr | (wiz_read(SOCKET0_TXWRU) << 8);
+    txwr = txwr | wiz_read(SOCKET0_TXWRL);
+    tx_offset = txwr & RXTX_MASK;
+
+    /* Get start address*/
+    tx_start_addr = SOCKET0_TX_BASE + tx_offset;
+
+    /* Overflow write to base address if overflow memory */
+    if ( (tx_offset + data_size) > RXTX_MASK + 1) {
+        
+    }
+
+}   
 void setup(void)
 {
     SCON = 0x50;    // Serial Mode 1 8 bit UART with timer1 baud rate

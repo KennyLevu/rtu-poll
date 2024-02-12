@@ -16,13 +16,26 @@
 #define SOCKET0_STAT 0x0403 // status register
 #define SOCKET0_PORT_U 0x0404 // upper half port number
 #define SOCKET0_PORT_L 0x0405 // lower half port number
+#define SOCKET0_TXFSU 0x0420 // upper half of tx free size register
+#define SOCKET0_TXFSL 0x0421 // lower half of tx free size register
+#define SOCKET0_TXWRU 0x0424 // upper half of tx write pointer register
+#define SOCKET0_TXWRL 0x0425 // lower half of tx write pointer register
 #define SOCKET0_RXSIZU 0x0426 // upper half of size of rx register
 #define SOCKET0_RXSIZL 0x0427 // lower half of size of rx register
 #define SOCKET0_RXRDU 0x0428 // upper half of read pointer register, shows locations of data
-#define SOCKET0_RXRDL 0x0429
+#define SOCKET0_RXRDL 0x0429 // loewr half of rdrx
+#define SOCKET0_DIP1 0x040c // destination ip 
+#define SOCKET0_DIP2 0x040d
+#define SOCKET0_DIP3 0x040e
+#define SOCKET0_DIP4 0x040f
+#define SOCKET0_DPORU 0x0410 // dest socket port upper half
+#define SOCKET0_DPORL 0x0411
 
-// RX Memory Base ADDR from datasheet
+// TXRX Memory Base ADDR from datasheet
 #define SOCKET0_RX_BASE 0x6000 
+#define SOCKET0_TX_BASE 0x4000
+// #define SOCKET1_RX_BASE 0x6800 
+// #define SOCKET1_TX_BASE 0x4000
 /* RX Mask = Memory size (4KB - 1) == 0xFFFF - 1
  mask helps calculate offset by wrapping the offset value within the register size */
 #define RXTX_MASK 0x1000 - 1 
@@ -33,10 +46,21 @@
 #define SOCKET1_STAT 0x503
 #define SOCKET1_PORT_U 0x0504
 #define SOCKET1_PORT_L 0x0505
+#define SOCKET1_TXFSU 0x0520
+#define SOCKET1_TXFSL 0x0521
+#define SOCKET1_TXWRU 0x0524
+#define SOCKET1_TXWRL 0x0525
 #define SOCKET1_RXSIZU 0x0526
 #define SOCKET1_RXSIZL 0x0527
 #define SOCKET1_RXRDU 0x0528
 #define SOCKET1_RXRDL 0x0529
+#define SOCKET1_DIP1 0x050c
+#define SOCKET1_DIP2 0x050d
+#define SOCKET1_DIP3 0x050e
+#define SOCKET1_DIP4 0x050f
+#define SOCKET1_DPORU 0x0510
+#define SOCKET1_DPORL 0x0511
+
 // GAR Register
 #define GATEWAY_1 0x0001
 #define GATEWAY_2 0x0002
