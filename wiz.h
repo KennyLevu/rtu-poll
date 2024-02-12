@@ -17,5 +17,6 @@ void wiz_set_mac(uint8_t a, uint8_t b, uint8_t c, uint8_t d, uint8_t e, uint8_t 
 void wiz_set_ip(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
 void wiz_set_port(uint8_t sock_n, uint8_t hex_upper, uint8_t hex_lower);
 void wiz_read_buf(uint16_t addr, uint16_t len, uint8_t *buffer);
+void wiz_write_buf(uint16_t addr, uint16_t len, uint8_t *buffer);
 
 #endif

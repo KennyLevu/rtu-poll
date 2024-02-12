@@ -181,7 +181,14 @@ void wiz_read_buf(uint16_t addr, uint16_t len, uint8_t *buffer)
     }
 }
 
-// void serial_txreg(uint16_t addr)
+// write to address from data buffer
+void wiz_write_buf(uint16_t addr, uint16_t len, uint8_t *buffer) 
+{
+    for (int i = 0; i < len; i++) {
+        wiz_write(addr + i, buffer[i]);
+    }
+}
+    // void serial_txreg(uint16_t addr)
 // {
 //     serial_txnum(wiz_read(addr));
 //     serial_ln();

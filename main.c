@@ -54,7 +54,7 @@ void wiz_init(void)
     wiz_write(TX_MEM_SIZE, 0x0A);   // assign 4kb to s0/s1 each 0000 1010
     /* Bind sockets to port numbers */
     wiz_set_port(0,0x13,0x88); // set socket 0 udp port to 5000 0x1388
-    wiz_set_port(1,0x13,0xec);   // set socket 1 tcp port to 5100 0x13ec
+    // wiz_set_port(1,0x13,0xec);   // set socket 1 tcp port to 5100 0x13ec
 
     
     /* Initialize TCP Socket*/
@@ -76,21 +76,66 @@ void wiz_init(void)
 
 void udp_open(void) 
 {
-    bool udp_open = false;
     /* Initialize UDP Socket*/
-    while (udp_open == false) {
-        // serial_txstring("still trying");
+    while (1) {
         wiz_write(SOCKET0_COM, OPEN); // open socket
         if (wiz_read(SOCKET0_STAT) != SOCK_UDP) {
             wiz_write(SOCKET0_COM, CLOSED); // socket not initialized, retry
         } else {
             serial_txstring("UDP Socket 0 port 5000 open\n");
-            udp_open = true;
+            break;
         }
     }
 }
 
+void udp_tx(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint8_t ip4, uint16_t port, uint16_t data_size, uint8_t *data)
+{
+    uint16_t tx_free = 0x0000, txwr = 0x0000; 
+    uint16_t tx_offset, tx_start_addr, upper_size, left_size;
 
+    /* Get free TX Memory size */
+    tx_free = tx_free | (wiz_read(SOCKET0_TXFSU) << 8);
+    tx_free = tx_free | wiz_read(SOCKET0_TXFSL);
+
+    /* Set destination ip,port */
+    wiz_write(SOCKET0_DIP1, ip1);
+    wiz_write(SOCKET0_DIP2, ip2);
+    wiz_write(SOCKET0_DIP3, ip3);
+    wiz_write(SOCKET0_DIP4, ip4);
+    wiz_write(SOCKET0_DPORU, (port >> 8) & 0xff);
+    wiz_write(SOCKET0_DPORL, port & 0xff);
+
+    /* Calculate offset from write pointer*/
+    txwr = txwr | (wiz_read(SOCKET0_TXWRU) << 8);
+    txwr = txwr | wiz_read(SOCKET0_TXWRL);
+    tx_offset = txwr & RXTX_MASK;
+
+    /* Get start address*/
+    tx_start_addr = SOCKET0_TX_BASE + tx_offset;
+
+    /* Overflow write to base address if overflow memory */
+    if ( (tx_offset + data_size) > RXTX_MASK + 1) {
+        // copy upper_size bytes to start addr
+        upper_size = (RXTX_MASK + 1) - tx_offset;
+        wiz_write_buf(tx_start_addr, upper_size, data);
+        left_size = (data_size - upper_size);
+        wiz_write_buf(SOCKET0_TX_BASE, left_size, data + upper_size);
+    }
+    else {
+        wiz_write_buf(tx_start_addr, data_size, data);
+    }
+
+
+    // update write pointer addr
+    txwr += data_size;
+    wiz_write(SOCKET0_COM, SEND);
+    if (wiz_read(SOCKET0_COM == 0)) {
+        serial_txstring("Send complete\n");
+    } else if (wiz_read(SOCKET0_IR) & 0x08) {
+        // check timeout bit
+        serial_txstring("\nSend failed\n");
+    }
+}   
 
 
 void udp_rx_helper(void) 
@@ -201,6 +246,7 @@ void udp_rx_helper(void)
     }
     serial_ln();
     serial_txstring("------------------\n");
+    udp_tx(buf_header[0], buf_header[1], buf_header[2], buf_header[3], peer_port, 4, "ack");
     /* increase Sn_RX_RD as length of received packet*/
     rxrd += data_size + UDP_HEADER_SIZE;
     // store upper and lower halves
@@ -221,38 +267,7 @@ void udp_rx(void)
         udp_rx_helper();
     }
 }
-void udp_tx(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint8_t ip4, uint16_t port)
-{
-    uint16_t tx_free = 0x0000, txwr = 0x0000; 
-    uint16_t tx_offset, tx_start_addr;
-    uint16_t data_size;
 
-    /* Get free TX Memory size */
-    tx_free = tx_free | (wiz_read(SOCKET0_TXFSU) << 8);
-    tx_free = tx_free | wiz_read(SOCKET0_TXFSL);
-
-    /* Set destination ip,port */
-    wiz_write(SOCKET0_DIP1, ip1);
-    wiz_write(SOCKET0_DIP2, ip2);
-    wiz_write(SOCKET0_DIP3, ip3);
-    wiz_write(SOCKET0_DIP4, ip4);
-    wiz_write(SOCKET0_DPORU, (port >> 8) & 0xff);
-    wiz_write(SOCKET0_DPORL, port & 0xff);
-
-    /* Calculate offset from write pointer*/
-    txwr = txwr | (wiz_read(SOCKET0_TXWRU) << 8);
-    txwr = txwr | wiz_read(SOCKET0_TXWRL);
-    tx_offset = txwr & RXTX_MASK;
-
-    /* Get start address*/
-    tx_start_addr = SOCKET0_TX_BASE + tx_offset;
-
-    /* Overflow write to base address if overflow memory */
-    if ( (tx_offset + data_size) > RXTX_MASK + 1) {
-        
-    }
-
-}   
 void setup(void)
 {
     SCON = 0x50;    // Serial Mode 1 8 bit UART with timer1 baud rate
@@ -267,20 +282,11 @@ void setup(void)
 void main(void)
 {
     delay_us(1000);
-    // wiz_write(SOCKET0_RXRDU, 0xfe);
-        // wiz_write(SOCKET0_RXRDL, 0xd);
     setup();
     CLK = LOW; // set clock idle state
-    // delay_us(1000);
-    
     wiz_init();
-    udp_open();
+    udp_open(); // open udp socket
 	while (1) {
-        // wiz_write(SOCKET0_RXRDU, 0xfe);
-        // wiz_write(SOCKET0_RXRDL, 0xd);
-        // wiz_read(SOCKET0_RXRDU);
-        // wiz_read(SOCKET0_RXRDL);
-        // serial_tx2reg(SOCKET0_RXRDU, SOCKET0_RXRDL);
         udp_rx();
        
     }
