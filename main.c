@@ -206,7 +206,6 @@ void udp_rx_helper(void)
 
     serial_txstring("Sender IP: ");
     for (int i = 0; i < 4; i++) {
-        // peer_ip[i] = buf_header[i];
         serial_txnum(buf_header[i]);
         if (i < 3) {
             serial_txchar('.');
@@ -214,18 +213,13 @@ void udp_rx_helper(void)
     }
     serial_txstring("\tSender Port: ");
     serial_txnum(peer_port);
-    // serial_txstring("\tData Size: ");
-    // serial_txnum(data_size);
     serial_txstring("\tRX Size: ");
     serial_txnum(rx_size);
-    // serial_txstring("\tRX_RD Pointer: ");
-    // serial_txnum(rxrd);
     serial_ln();
     serial_txstring("DATA: ");
 
     // Allocate buffer for data size
     peer_data = malloc(sizeof(uint8_t) * data_size);
-    // uint8_t peer_data2[data_size] = {0};
 
     /* Read Data
         1. Check if data size overflows rx buffer
@@ -255,7 +249,6 @@ void udp_rx_helper(void)
     // serial_txstring("rxrd pointer end: ");
     // Set received command
     wiz_write(SOCKET0_COM, RECV);
-    // serial_tx2reg(SOCKET0_RXRDU, SOCKET0_RXRDL);
     // Clear s0_ir register by writing 1s
     wiz_write(SOCKET0_IR, 0xff);
     free(peer_data);
