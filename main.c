@@ -103,36 +103,23 @@ void udp_rx_helper(void)
     uint16_t rx_size = 0x0000;
     uint8_t buf_header[8] = {0};
     uint8_t peer_ip[4] = {0};
-    // uint8_t *peer_data = NULL;
+    uint8_t *peer_data = NULL;
 
     /* Get rx register size by combinning upper and lower half size values */
     rxsizu = wiz_read(SOCKET0_RXSIZU);
     rxsizl = wiz_read(SOCKET0_RXSIZL);
     rx_size = rx_size | rxsizl;
     rx_size = rx_size | (rxsizu << 8);
-    // serial_txstring("RX Size: ");
-    // serial_txnum(rx_size);
+    serial_txstring("RX Size: ");
+    serial_txnum(rx_size);
     
 
     /* Calculate offset */
 
     rxrd = rxrd | (wiz_read(SOCKET0_RXRDU) << 8);
     rxrd = rxrd | wiz_read(SOCKET0_RXRDL);
-    // serial_txstring("\t rxrd: ");
-    // serial_txnum(rxrd);
-    // serial_txstring("\t rxrd: ");
-    // serial_txnum(rxrd);
-
-    // serial_txstring("\t rxrd: ");
-    // serial_txnum(rxrd);
-
-    // serial_txstring("\t Mask: ");
-    // serial_txnum(RXTX_MASK);
     rx_offset = rxrd & RXTX_MASK;
 
-    // serial_txstring("\t Offset: ");
-    // serial_txnum(RXTX_MASK);
-    
     /* Get start (physical) address*/
     rx_start_addr = SOCKET0_RX_BASE + rx_offset;
     // serial_txstring("\t start_addr: ");
@@ -193,14 +180,14 @@ void udp_rx_helper(void)
     serial_ln();
 
     // Allocate buffer for data size
-    // peer_data = malloc(sizeof(uint8_t) * data_size);
-
+    peer_data = malloc(sizeof(uint8_t) * data_size);
+    // uint8_t peer_data2[data_size] = {0};
 
     /* Read Data
         1. Check if data size overflows rx buffer
             - Read data in two parts
     */
-    // if( (rx_offset + data_size) > (RXTX_MASK + 1) ) {
+    // if( (rx_offset + rx_size) > (RXTX_MASK + 1) ) {
     //     serial_txstring("\nUDP RX DATA Overflow Detected\n");
     //     upper_size = (RXTX_MASK + 1) - rx_offset; // get first part of data
     //     wiz_read_buf(rx_start_addr, upper_size, peer_data);
@@ -210,46 +197,37 @@ void udp_rx_helper(void)
     // else {
     //     wiz_read_buf(rx_start_addr, data_size, peer_data);
     // }
-    // for (int i = 0; i < data_size-UDP_HEADER_SIZE; i++) {
+    // for (int i = 0; i < data_size; i++) {
     //     serial_txchar(peer_data[i]);
     //     serial_ln();
     // }
     /* increase Sn_RX_RD as length of data_size+header_size */
-    rxrd += data_size;
+    rxrd += rx_size;
     rxrd += UDP_HEADER_SIZE;
 
-    serial_txstring("Computed rxrd: ");
+    serial_txstring("\tcomputed rxrd: ");
     serial_txnum(rxrd);
-    serial_ln();
-    wiz_write(SUBNET_1, 10);
-    serial_txstring("subnet: ");
-    serial_txreg(SUBNET_1);
-    serial_txstring("rx reg size start:");
-    serial_tx2reg(SOCKET0_RXSIZU, SOCKET0_RXSIZL);
-    serial_txstring("rxrd pointer start: ");
-    serial_tx2reg(SOCKET0_RXRDU, SOCKET0_RXRDL);
     // RXRD is processed with received command
-    uint8_t upper = (rxrd >> 8) & 0xff;
-    uint8_t lower =  (rxrd&0xff);
-    serial_txstring("upper:");
-    serial_txnum(upper);
-    serial_txstring("lower:");
-    serial_txnum(lower);
-    serial_ln();
-    // wiz_write(SOCKET0_RXRDU, upper);
-    // wiz_write(SOCKET0_RXRDL, 1);
-    serial_txstring("direct rxrd read: ");
-    serial_txnum(wiz_read(SOCKET0_RXRDU));
-    serial_txnum(wiz_read(SOCKET0_RXRDL));
+    // uint8_t upper = (rxrd >> 8) & 0xff;
+    // uint8_t lower =  (rxrd&0xff);
+    // serial_txstring("\tupper:");
+    // serial_txnum(upper);
+    // serial_txstring("\tlower:");
+    // serial_txnum(lower);
+    // serial_ln();
     serial_txstring("rxrd pointer end: ");
-    serial_tx2reg(SOCKET0_RXRDU, SOCKET0_RXRDL);
+    wiz_write(SOCKET0_RXRDU, (rxrd >> 8) & 0xff);
+    wiz_write(SOCKET0_RXRDL, rxrd&0xff);
+    // serial_tx2reg(SOCKET0_RXRDU, SOCKET0_RXRDL);
+    //     serial_txstring("rx reg size:");
+    // serial_tx2reg(SOCKET0_RXSIZU, SOCKET0_RXSIZL);
     // Set received command
     wiz_write(SOCKET0_COM, RECV);
-    serial_txstring("rx reg size:");
-    serial_tx2reg(SOCKET0_RXSIZU, SOCKET0_RXSIZL);
-    serial_txstring("Interrupt reg: ");
+    serial_tx2reg(SOCKET0_RXRDU, SOCKET0_RXRDL);
+    serial_txstring("\tInterrupt reg: ");
+    wiz_write(SOCKET0_IR, 1);
     serial_txreg(SOCKET0_IR);
-    // free(peer_data);
+    free(peer_data);
 }
 
 void udp_rx(void) 
@@ -277,20 +255,18 @@ void main(void)
     delay_us(1000);
     // wiz_write(SOCKET0_RXRDU, 0xfe);
         // wiz_write(SOCKET0_RXRDL, 0xd);
-    // setup();
+    setup();
     CLK = LOW; // set clock idle state
     // delay_us(1000);
     
-    // wiz_init();
-    // udp_open();
+    wiz_init();
+    udp_open();
 	while (1) {
-        // wiz_write(SOCKET0_PORT_L, 0xfe);
-        // wiz_read(SOCKET0_PORT_L);
         // wiz_write(SOCKET0_RXRDU, 0xfe);
         // wiz_write(SOCKET0_RXRDL, 0xd);
         // wiz_read(SOCKET0_RXRDU);
         // wiz_read(SOCKET0_RXRDL);
         // serial_tx2reg(SOCKET0_RXRDU, SOCKET0_RXRDL);
-        // udp_rx();
+        udp_rx();
     }
 }
