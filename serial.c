@@ -72,7 +72,7 @@ void byte_to_ascii(uint16_t num, char *ascii_str)
         ascii_str[1] = '\0';
     }
 }
-void serial_txchar(char ch)
+void serial_txchar(const char ch)
 {
     SBUF=ch;       // Load the data to be transmitted
     while(TI == 0);    // Wait till the data is trasmitted
@@ -92,7 +92,7 @@ void serial_tab(void)
         TI = 0;   
 }
 
-void serial_txstring(char *string_ptr)
+void serial_txstring(const char *string_ptr)
 {
           while(*string_ptr)
            serial_txchar(*string_ptr++);
