@@ -40,3 +40,7 @@ flash: $(TARGET).ihx
 # Clean up intermediate files
 clean:
 	rm $(TARGET).lk
+
+# Run Python script with UDP arguments
+udp:
+	py udp.py $(IP) $(PORT) "$(MESSAGE)"

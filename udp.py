@@ -1,6 +1,7 @@
 import socket
 import sys
 
+# CHATGPT
 def send_receive_message(ip, port, message):
     try:
         # Create a UDP socket
