@@ -8,6 +8,17 @@
 #include "serial.h"
 #include "wiz.h"
 
+uint8_t rtu = '0';
+// uint8_t gate[4] = {0};
+// uint8_t subnet[4] = {0};
+// uint8_t ip[4] = {0};
+// uint8_t mac[6] = {0};
+// bool mode = UDP;
+// uint16_t port = 5000;
+
+
+// uint8_t serial_in[21] = {0};
+// uint8_t serial_pt = 0;
 
 void serial_txreg(uint16_t addr)
 {
@@ -197,7 +208,7 @@ void udp_tx(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint8_t ip4, uint16_t port, u
 
 void udp_rx_helper(void) 
 {
-    serial_txstring("------------------\n");
+    // serial_txstring("------------------\n");
     serial_txstring("UDP Packet Received\n");
     uint16_t rx_offset, rx_start_addr, upper_size, left_size; // upper size stores uper size of start address, left stores left size of base addr
     uint8_t rxsizu, rxsizl; // stores upper and lower half of rx register size
@@ -273,7 +284,6 @@ void udp_rx_helper(void)
     serial_txstring("\tRX Size: ");
     serial_txnum(rx_size);
     serial_ln();
-    serial_txstring("DATA: ");
 
     // Allocate buffer for data size
     peer_data = malloc(sizeof(uint8_t) * data_size);
@@ -292,9 +302,24 @@ void udp_rx_helper(void)
     else {
         wiz_read_buf(rx_start_addr, data_size, peer_data);
     }
-    for (int i = 0; i < data_size; i++) {
-        serial_txchar(peer_data[i]);
+    serial_txstring("RESPONSE: ");
+    if (peer_data[0] == rtu) {
+        for (int i = 0; i < data_size; i++) { // Convert to uppercase
+            if (peer_data[i] >= 'a' && peer_data[i] <= 'z' ) {
+                peer_data[i] = peer_data[i] - 32;
+                serial_txchar(peer_data[i]);
+            }
+            else {
+                serial_txchar(peer_data[i]);
+            }
+        }
+        udp_tx(peer_header[0], peer_header[1], peer_header[2], peer_header[3], peer_port, data_size, peer_data);
     }
+    else {
+        serial_txstring("Incorrect format or wrong RTU");
+        udp_tx(peer_header[0], peer_header[1], peer_header[2], peer_header[3], peer_port, 29, "Incorrect format or wrong RTU");
+    }
+    
     serial_ln();
     serial_txstring("------------------\n");
     /* increase Sn_RX_RD as length of received packet*/
@@ -308,8 +333,6 @@ void udp_rx_helper(void)
     // Clear s0_ir register by writing 1s
     wiz_write(SOCKET0_IR, 0xff);
     free(peer_data);
-    udp_tx(peer_header[0], peer_header[1], peer_header[2], peer_header[3], peer_port, 4, "ack");
-
 }
 
 void udp_rx(void) 
@@ -328,6 +351,24 @@ void setup(void)
     EA = HIGH;			// enable interrupts
 	ES = HIGH;			// enable serial port interrupts
     TR1 = 1; // start timer
+}
+
+void interface(void) {
+    // serial_txstring("RTU: ");
+    // // DO RTU
+    // serial_txstring("\tGATE: ");
+    // // DO GATE
+    // serial_txstring("\tSUBNET: ");
+    // // DO SUB
+    // serial_txstring("\tIP: ");
+    // // DO IP
+    // serial_txstring("\tMAC: ");
+    // // DO MAC
+    // serial_txstring("\nMODE: ");
+    // // DO MODE
+    // serial_txstring("\tPORT: ");
+    // // DO PORT
+    // serial_txstring("------------------\n");
 }
 
 void main(void)

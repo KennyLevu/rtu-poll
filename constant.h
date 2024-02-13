@@ -5,7 +5,10 @@
 
 #define OP_WRITE 0xf0
 #define OP_READ 0x0f
-
+#define ENTER 10 // Eneter key ascii
+#define ESC 27 // Escape key ascii
+#define UDP 0
+#define TCP 1
 // IR Interrupt Register (read only)
 #define INTER_REG 0x0015
 #define SOCK0_MSK 0x01 // interrupt mask
