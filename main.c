@@ -17,8 +17,8 @@ uint8_t rtu = '0';
 // uint16_t port = 5000;
 
 
-// uint8_t serial_in[21] = {0};
-// uint8_t serial_pt = 0;
+uint8_t serial_in[21] = {0};
+uint8_t serial_pt = 0;
 
 void serial_txreg(uint16_t addr)
 {
