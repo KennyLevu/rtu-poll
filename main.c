@@ -17,8 +17,8 @@ uint8_t rtu = '0';
 // uint16_t port = 5000;
 
 
-uint8_t serial_in[21] = {'\0'};
-int serial_pt = 0;
+uint8_t serial_in[22] = {'\0'};
+uint8_t serial_pt = 0;
 
 void serial_txreg(uint16_t addr)
 {
@@ -464,9 +464,9 @@ void main(void)
 
         if (read == ENTER && serial_pt != 0) {
             // serial_txnum(read);
-            serial_txstring("COM>");
+            serial_txstring("\r\nCOM>");
             serial_txstring(serial_in);
-            // serial_txstring("\r\n");
+            serial_txstring("\r\n");
             // serial_txchar(13);
             // serial_txchar(10);
             // // evaluate config menu
@@ -477,9 +477,9 @@ void main(void)
             // }
 
             // clear buffer
-            // for (serial_pt; serial_pt >= 0; serial_pt--) {
-            //     serial_in[serial_pt] = '\0';
-            // }
+            for (; serial_pt > 0; serial_pt--) {
+                serial_in[serial_pt] = '\0';
+            }
             // serial_txstring("\r\n>");
         }
     }
