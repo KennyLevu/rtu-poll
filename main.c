@@ -118,7 +118,7 @@ void udp_open(void)
         if (wiz_read(SOCKET0_STAT) != SOCK_UDP) {
             wiz_write(SOCKET0_COM, CLOSED); // socket not initialized, retry
         } else {
-            serial_txstring("UDP Socket 0 port 5000 open\n");
+            serial_txstring("UDP Socket 0 port 5000 open\r\n");
             break;
         }
     }
@@ -170,7 +170,7 @@ void udp_tx(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint8_t ip4, uint16_t port, u
 
     /* Overflow write to base address if overflow memory */
     if ( (tx_offset + data_size) > RXTX_MASK + 1) {
-    serial_txstring("\t overflow \n");
+    serial_txstring("\t overflow \r\n");
         // copy upper_size bytes to start addr
         upper_size = (RXTX_MASK + 1) - tx_offset;
         wiz_write_buf(tx_start_addr, upper_size, data);
@@ -178,7 +178,7 @@ void udp_tx(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint8_t ip4, uint16_t port, u
         wiz_write_buf(SOCKET0_TX_BASE, left_size, data + upper_size);
     }
     else {
-    // serial_txstring("\t writing \n");
+    // serial_txstring("\t writing \r\n");
 
         // serial_txstring("buf:");
         wiz_write_buf(tx_start_addr, data_size, data);
@@ -197,10 +197,10 @@ void udp_tx(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint8_t ip4, uint16_t port, u
     // while(1) {
     wiz_write(SOCKET0_COM, SEND);
     if (wiz_read(SOCKET0_COM == 0x00)) {
-        serial_txstring("Send complete\n");
+        serial_txstring("Send complete\r\n");
     } else if (wiz_read(SOCKET0_IR) & 0x08) {
         // check timeout bit
-        serial_txstring("\nSend failed\n");
+        serial_txstring("\r\nSend failed\r\n");
     }
 // }
 }   
@@ -208,8 +208,8 @@ void udp_tx(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint8_t ip4, uint16_t port, u
 
 void udp_rx_helper(void) 
 {
-    // serial_txstring("------------------\n");
-    serial_txstring("UDP Packet Received\n");
+    // serial_txstring("------------------\r\n");
+    serial_txstring("UDP Packet Received\r\n");
     uint16_t rx_offset, rx_start_addr, upper_size, left_size; // upper size stores uper size of start address, left stores left size of base addr
     uint8_t rxsizu, rxsizl; // stores upper and lower half of rx register size
     uint16_t peer_port = 0x0000, data_size = 0x0000, rxrd = 0x0000;
@@ -248,7 +248,7 @@ void udp_rx_helper(void)
         2. get remote information and data size from header 
     */
     if ( (rx_offset + UDP_HEADER_SIZE) > (RXTX_MASK + 1) ) {
-        serial_txstring("\nUDP RX Header Overflow Detected\n");
+        serial_txstring("\r\nUDP RX Header Overflow Detected\r\n");
         upper_size = (RXTX_MASK + 1) - rx_offset; // get difference between end of buffer and offset
         wiz_read_buf(rx_start_addr, upper_size, peer_header); 
         left_size = UDP_HEADER_SIZE - upper_size; // get the remaining amount of data 
@@ -293,7 +293,7 @@ void udp_rx_helper(void)
             - Read data in two parts
     */
     if( (rx_offset + rx_size) > (RXTX_MASK + 1) ) {
-        serial_txstring("\nUDP RX DATA Overflow Detected\n");
+        serial_txstring("\r\nUDP RX DATA Overflow Detected\r\n");
         upper_size = (RXTX_MASK + 1) - rx_offset; // get first part of data
         wiz_read_buf(rx_start_addr, upper_size, peer_data);
         left_size = data_size - upper_size; // get remaining data 
@@ -302,7 +302,7 @@ void udp_rx_helper(void)
     else {
         wiz_read_buf(rx_start_addr, data_size, peer_data);
     }
-    serial_txstring("RESPONSE: ");
+    serial_txstring("\rRESPONSE: ");
     if (peer_data[0] == rtu) {
         for (int i = 0; i < data_size; i++) { // Convert to uppercase
             if (peer_data[i] >= 'a' && peer_data[i] <= 'z' ) {
@@ -321,7 +321,7 @@ void udp_rx_helper(void)
     }
     
     serial_ln();
-    serial_txstring("------------------\n");
+    serial_txstring("\r------------------\r\n");
     /* increase Sn_RX_RD as length of received packet*/
     rxrd += data_size + UDP_HEADER_SIZE;
     // store upper and lower halves
@@ -364,11 +364,11 @@ void interface(void) {
     // // DO IP
     // serial_txstring("\tMAC: ");
     // // DO MAC
-    // serial_txstring("\nMODE: ");
+    // serial_txstring("\r\nMODE: ");
     // // DO MODE
     // serial_txstring("\tPORT: ");
     // // DO PORT
-    // serial_txstring("------------------\n");
+    // serial_txstring("------------------\r\n");
 }
 
 void main(void)
