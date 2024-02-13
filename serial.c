@@ -6,18 +6,6 @@
 #include "periph.h"
 #include "constant.h"
 
-// char getCharacter (void)
-// {
-//     char chr;
-//     while (RI != 1) {;}
-
-//     while(SBUF != '~')
-//     {
-//     chr = chr + SBUF;
-//     }
-//     RI = 0;
-//     return(chr);
-// }
 // delay approximately 10us for each count
 void delay_us(unsigned int us_count)
  {  
@@ -124,10 +112,12 @@ void serial_txnum(uint16_t val)
 
 unsigned char RX_data(void)
 {
-    unsigned char a;
-    while(RI == 0);
-    RI = 0;
-    a = SBUF;
-    serial_txchar(a);
-    return a;
+    if (RI == 1) {
+        unsigned char a;
+        RI = 0;
+        a = SBUF;
+        // serial_txchar(a);
+        return a;
+    }
+    return 0;
 }

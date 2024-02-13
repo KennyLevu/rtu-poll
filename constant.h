@@ -7,6 +7,8 @@
 #define OP_READ 0x0f
 #define ENTER 10 // Eneter key ascii
 #define ESC 27 // Escape key ascii
+#define BACK 8 // Backspace key ascii
+#define SPACE 32 // space
 #define UDP 0
 #define TCP 1
 // IR Interrupt Register (read only)

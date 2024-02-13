@@ -17,8 +17,8 @@ uint8_t rtu = '0';
 // uint16_t port = 5000;
 
 
-uint8_t serial_in[21] = {0};
-uint8_t serial_pt = 0;
+uint8_t serial_in[21] = {'\0'};
+int serial_pt = 0;
 
 void serial_txreg(uint16_t addr)
 {
@@ -350,7 +350,8 @@ void setup(void)
     REN = HIGH;        // serial port initialization
     EA = HIGH;			// enable interrupts
 	ES = HIGH;			// enable serial port interrupts
-    TR1 = 1; // start timer
+    TR1 = HIGH; // start timer
+    RI = LOW; // clear transmit interupt
 }
 
 void interface(void) {
@@ -371,6 +372,16 @@ void interface(void) {
     // serial_txstring("------------------\r\n");
 }
 
+void print_config(void) {
+
+    serial_txstring("****************************************************\r\n");
+    serial_txstring("Set/Change RTU Address (0-9): USING RTU=<# 0-9>\r\n");
+    serial_txstring("Set/Change IP Address: USING IP=<###.###.###.###>\r\n");
+    serial_txstring("Set/Change Subnet Mask: USING SUB=<###.###.###.###>\r\n");
+    serial_txstring("Set/Change Gateway: USING GATE=<###.###.###.###>\r\n");
+    serial_txstring("Set/Change MAC Address: USING MAC=<0F:0F:0F:0F:0F:0F>\r\n");
+    serial_txstring("****************************************************\r\n");
+}
 void main(void)
 {
     delay_us(1000);
@@ -378,8 +389,52 @@ void main(void)
     CLK = LOW; // set clock idle state
     wiz_init();
     udp_open(); // open udp socket
+    uint8_t read;
 	while (1) {
         udp_rx();
-        // udp_tx(126, 10, 218, 163, 8888, 4, "ack");
+        read = RX_data(); // get character from terminal
+        // if (read != 0) {
+        //     serial_txnum(read);
+        // }
+
+        /* Take input from valid keys and store in buffer*/
+        if (read >= '.' && read <= 'z' && serial_pt < 21) {
+            serial_in[serial_pt] = read;
+            serial_pt++;
+            serial_txchar(read);
+        }
+        /* Handle backspace on terminal */
+        if (read == BACK && serial_pt != 0) {
+            serial_in[serial_pt] = '\0';
+            serial_pt--;
+            serial_txchar(BACK); // set cursor back one
+            serial_txchar(SPACE); // insert 'empty' character
+            serial_txchar(BACK); // set cursor back
+        }
+
+        if (read == ENTER && serial_pt != 0) {
+            serial_txstring("\r\n");
+            if (serial_pt == 1 && serial_in[0] == '?') {
+                print_config();
+            }
+
+        }
+        // else if (read == ENTER) {
+        //     serial_txstring("\r\n");
+        //     if (serial_pt == 1 && serial_in[0] == '?') {
+        //         // print config menu
+        //         print_config();
+
+        //     }
+        //     // config(); // handle command
+        //     for (serial_pt; serial_pt >= 0; serial_pt--) {
+        //         serial_in[serial_pt] = '\0';
+        //     }
+        // }
+        // else if (read >= '.' && read <= 'z' && serial_pt < 21) {
+        //     serial_in[serial_pt] = read;
+        //     serial_pt++;
+        //     serial_txchar(read);
+        // }
     }
 }
