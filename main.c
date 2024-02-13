@@ -381,6 +381,56 @@ void print_config(void) {
     serial_txstring("Set/Change Gateway: USING GATE=<###.###.###.###>\r\n");
     serial_txstring("Set/Change MAC Address: USING MAC=<0F:0F:0F:0F:0F:0F>\r\n");
     serial_txstring("****************************************************\r\n");
+
+    serial_txstring("WizNet Adapter:\r\n");
+
+    serial_txstring("   IPv4 Address  . . : ");
+    serial_txnum(wiz_read(IP_1));
+    serial_txchar('.');
+    serial_txnum(wiz_read(IP_2));
+    serial_txchar('.');
+    serial_txnum(wiz_read(IP_3));
+    serial_txchar('.');
+    serial_txnum(wiz_read(IP_4));
+    serial_txstring("\r\n");
+
+    serial_txstring("   RTU Address . . . : ");
+    serial_txchar('#');
+    serial_txnum(rtu);
+    serial_txstring("\r\n");
+
+    serial_txstring("   Subnet Mask . . . : ");
+    serial_txnum(wiz_read(SUBNET_1));
+    serial_txchar('.');
+    serial_txnum(wiz_read(SUBNET_2));
+    serial_txchar('.');
+    serial_txnum(wiz_read(SUBNET_3));
+    serial_txchar('.');
+    serial_txnum(wiz_read(SUBNET_4));
+    serial_txstring("\r\n");
+
+    serial_txstring("   Gateway Address . : ");
+    serial_txnum(wiz_read(GATEWAY_1));
+    serial_txchar('.');
+    serial_txnum(wiz_read(GATEWAY_2));
+    serial_txchar('.');
+    serial_txnum(wiz_read(GATEWAY_3));
+    serial_txchar('.');
+    serial_txnum(wiz_read(GATEWAY_4));
+    serial_txstring("\r\n");
+
+    serial_txstring("   MAC Address . . . : ");
+    serial_txhex(wiz_read(MAC_1));
+    serial_txhex(wiz_read(MAC_2));
+    serial_txhex(wiz_read(MAC_3));
+    serial_txhex(wiz_read(MAC_4));
+    serial_txhex(wiz_read(MAC_5));
+    serial_txhex(wiz_read(MAC_6));
+    serial_txstring("\n");
+    serial_txstring("\r\n");
+
+
+
 }
 void main(void)
 {
@@ -404,7 +454,7 @@ void main(void)
             serial_txchar(read);
         }
         /* Handle backspace on terminal */
-        if (read == BACK && serial_pt != 0) {
+        if (read == BACK && serial_pt > 0) {
             serial_in[serial_pt] = '\0';
             serial_pt--;
             serial_txchar(BACK); // set cursor back one
@@ -413,28 +463,25 @@ void main(void)
         }
 
         if (read == ENTER && serial_pt != 0) {
-            serial_txstring("\r\n");
-            if (serial_pt == 1 && serial_in[0] == '?') {
-                print_config();
-            }
+            // serial_txnum(read);
+            serial_txstring("COM>");
+            serial_txstring(serial_in);
+            // serial_txstring("\r\n");
+            // serial_txchar(13);
+            // serial_txchar(10);
+            // // evaluate config menu
+            // if (serial_pt == 1 && serial_in[0] == '?') {
+            //     print_config();
+            // } else {
+            //     serial_txstring("\r\nInvalid Command, type '?' for more details\r\n");
+            // }
 
+            // clear buffer
+            // for (serial_pt; serial_pt >= 0; serial_pt--) {
+            //     serial_in[serial_pt] = '\0';
+            // }
+            // serial_txstring("\r\n>");
         }
-        // else if (read == ENTER) {
-        //     serial_txstring("\r\n");
-        //     if (serial_pt == 1 && serial_in[0] == '?') {
-        //         // print config menu
-        //         print_config();
-
-        //     }
-        //     // config(); // handle command
-        //     for (serial_pt; serial_pt >= 0; serial_pt--) {
-        //         serial_in[serial_pt] = '\0';
-        //     }
-        // }
-        // else if (read >= '.' && read <= 'z' && serial_pt < 21) {
-        //     serial_in[serial_pt] = read;
-        //     serial_pt++;
-        //     serial_txchar(read);
-        // }
     }
+
 }

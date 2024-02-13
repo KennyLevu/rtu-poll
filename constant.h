@@ -5,9 +5,9 @@
 
 #define OP_WRITE 0xf0
 #define OP_READ 0x0f
-#define ENTER 10 // Eneter key ascii
-#define ESC 27 // Escape key ascii
-#define BACK 8 // Backspace key ascii
+#define ENTER 13 // Enter key ascii tera term
+#define ESC 27 // Escape key ascii tera term
+#define BACK 8 // Backspace key ascii tera term
 #define SPACE 32 // space
 #define UDP 0
 #define TCP 1

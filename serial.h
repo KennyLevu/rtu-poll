@@ -11,5 +11,7 @@ void serial_ln(void);
 void serial_tab(void); 
 void serial_txstring(char *string_ptr);
 void serial_txnum(uint16_t val);
+void serial_txhex(uint8_t val);
+
 
 #endif

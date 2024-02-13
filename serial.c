@@ -26,6 +26,31 @@ void delay10(void)
     TR0 = 0;    // Stop Timer
     TF0 = 0;   // Clear flag
 }
+void serial_txchar(const char ch)
+{
+    SBUF=ch;       // Load the data to be transmitted
+    while(TI == 0);    // Wait till the data is trasmitted
+        TI = 0;         //Clear the flag for next cycle.
+}
+void serial_txstring(const char *string_ptr)
+{
+          while(*string_ptr)
+           serial_txchar(*string_ptr++);
+}
+
+// converts byte to 1 byte hex representation with a bit mask and digit dictionary
+void byte_to_hex(uint8_t byte, char* hex) {
+    const char* hex_digits = "0123456789ABCDEF"; // dictionary for hex digits maps index to corresponding hex value
+    hex[0] = hex_digits[(byte >> 4) & 0x0F];
+    hex[1] = hex_digits[byte & 0x0F];
+    hex[2] = '\0';
+}
+
+void serial_txhex(uint8_t val) {
+    char str[3] = {'\0'};
+    byte_to_hex(val, str);
+    serial_txstring(str);
+}
 
 
 void byte_to_ascii(uint16_t num, char *ascii_str) 
@@ -60,12 +85,6 @@ void byte_to_ascii(uint16_t num, char *ascii_str)
         ascii_str[1] = '\0';
     }
 }
-void serial_txchar(const char ch)
-{
-    SBUF=ch;       // Load the data to be transmitted
-    while(TI == 0);    // Wait till the data is trasmitted
-        TI = 0;         //Clear the flag for next cycle.
-}
 
 void serial_ln(void) 
 {
@@ -80,11 +99,6 @@ void serial_tab(void)
         TI = 0;   
 }
 
-void serial_txstring(const char *string_ptr)
-{
-          while(*string_ptr)
-           serial_txchar(*string_ptr++);
-}
 
 void serial_txnum(uint16_t val)
 {
