@@ -353,82 +353,62 @@ void setup(void)
     RI = LOW; // clear transmit interupt
 }
 
-void interface(void) {
-    // serial_txstring("RTU: \0");
-    // // DO RTU
-    // serial_txstring("\tGATE: \0");
-    // // DO GATE
-    // serial_txstring("\tSUBNET: \0");
-    // // DO SUB
-    // serial_txstring("\tIP: \0");
-    // // DO IP
-    // serial_txstring("\tMAC: \0");
-    // // DO MAC
-    // serial_txstring("\r\nMODE: \0");
-    // // DO MODE
-    // serial_txstring("\tPORT: \0");
-    // // DO PORT
-    // serial_txstring("------------------\r\n\0");
-}
-
 void print_config(void) {
+    serial_txstring("\n\rWizNet Adapter:\r\n\n");
 
-    // serial_txstring("****************************************************\r\n\0");
-    // serial_txstring("Set/Change RTU Address (0-9): USING RTU=<# 0-9>\r\n\0");
-    // serial_txstring("Set/Change IP Address: USING IP=<###.###.###.###>\r\n\0");
-    // serial_txstring("Set/Change Subnet Mask: USING SUB=<###.###.###.###>\r\n\0");
-    // serial_txstring("Set/Change Gateway: USING GATE=<###.###.###.###>\r\n\0");
-    // serial_txstring("Set/Change MAC Address: USING MAC=<0F:0F:0F:0F:0F:0F>\r\n\0");
-    // serial_txstring("****************************************************\r\n\0");
+    serial_txstring("   IPv4 Address  . . : ");
+    serial_txnum(wiz_read(IP_1));
+    serial_txchar('.');
+    serial_txnum(wiz_read(IP_2));
+    serial_txchar('.');
+    serial_txnum(wiz_read(IP_3));
+    serial_txchar('.');
+    serial_txnum(wiz_read(IP_4));
+    serial_txstring("\r\n");
 
-    serial_txstring("WizNet Adapter:\r\n\0");
+    serial_txstring("   RTU Address . . . : ");
+    serial_txnum(rtu);
+    serial_txstring("\r\n");
 
-    // serial_txstring("   IPv4 Address  . . : \0");
-    // serial_txnum(wiz_read(IP_1));
-    // serial_txchar('.');
-    // serial_txnum(wiz_read(IP_2));
-    // serial_txchar('.');
-    // serial_txnum(wiz_read(IP_3));
-    // serial_txchar('.');
-    // serial_txnum(wiz_read(IP_4));
-    // serial_txstring("\r\n\0");
+    serial_txstring("   Subnet Mask . . . : ");
+    serial_txnum(wiz_read(SUBNET_1));
+    serial_txchar('.');
+    serial_txnum(wiz_read(SUBNET_2));
+    serial_txchar('.');
+    serial_txnum(wiz_read(SUBNET_3));
+    serial_txchar('.');
+    serial_txnum(wiz_read(SUBNET_4));
+    serial_txstring("\r\n");
 
-    // serial_txstring("   RTU Address . . . : \0");
-    // serial_txchar('#');
-    // serial_txnum(rtu);
-    // serial_txstring("\r\n\0");
+    serial_txstring("   Gateway Address . : ");
+    serial_txnum(wiz_read(GATEWAY_1));
+    serial_txchar('.');
+    serial_txnum(wiz_read(GATEWAY_2));
+    serial_txchar('.');
+    serial_txnum(wiz_read(GATEWAY_3));
+    serial_txchar('.');
+    serial_txnum(wiz_read(GATEWAY_4));
+    serial_txstring("\r\n");
 
-    // serial_txstring("   Subnet Mask . . . : \0");
-    // serial_txnum(wiz_read(SUBNET_1));
-    // serial_txchar('.');
-    // serial_txnum(wiz_read(SUBNET_2));
-    // serial_txchar('.');
-    // serial_txnum(wiz_read(SUBNET_3));
-    // serial_txchar('.');
-    // serial_txnum(wiz_read(SUBNET_4));
-    // serial_txstring("\r\n\0");
+    serial_txstring("   MAC Address . . . : ");
+    serial_txhex(wiz_read(MAC_1));
+    serial_txchar(':');
+    serial_txhex(wiz_read(MAC_2));
+    serial_txchar(':');
+    serial_txhex(wiz_read(MAC_3));
+    serial_txchar(':');
+    serial_txhex(wiz_read(MAC_4));
+    serial_txchar(':');
+    serial_txhex(wiz_read(MAC_5));
+    serial_txchar(':');
+    serial_txhex(wiz_read(MAC_6));
+    serial_txstring("\n\r\n");
 
-    // serial_txstring("   Gateway Address . : \0");
-    // serial_txnum(wiz_read(GATEWAY_1));
-    // serial_txchar('.');
-    // serial_txnum(wiz_read(GATEWAY_2));
-    // serial_txchar('.');
-    // serial_txnum(wiz_read(GATEWAY_3));
-    // serial_txchar('.');
-    // serial_txnum(wiz_read(GATEWAY_4));
-    // serial_txstring("\r\n\0");
-
-    // serial_txstring("   MAC Address . . . : \0\0");
-    // serial_txhex(wiz_read(MAC_1));
-    // serial_txhex(wiz_read(MAC_2));
-    // serial_txhex(wiz_read(MAC_3));
-    // serial_txhex(wiz_read(MAC_4));
-    // serial_txhex(wiz_read(MAC_5));
-    // serial_txhex(wiz_read(MAC_6));
-    // serial_txstring("\n\0");
-    // serial_txstring("\r\n\0");
-
-
+    serial_txstring("Set RTU (0-9): USING RTU=\r\n");
+    serial_txstring("Set IP: USING IP=\r\n");
+    serial_txstring("Set SUBNET: USING SUB=\r\n");
+    serial_txstring("Set GATE: USING GATE=\r\n");
+    serial_txstring("Set MAC: USING MAC=\r\n\n");
 
 }
 void main(void)
@@ -477,7 +457,7 @@ void main(void)
             if (serial_pt == 1 && serial_in[0] == '?') {
                 print_config();
             } else {
-                serial_txstring("Invalid Command\r\n\0");
+                serial_txstring("Invalid, try <?>\r\n\0");
             }
 
             // clear buffer

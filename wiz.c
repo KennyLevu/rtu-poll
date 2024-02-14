@@ -73,7 +73,7 @@ uint8_t wiz_read(uint16_t addr)
     return byte;
 }
 
-// // set gateway address a.b.c.d
+// set gateway address a.b.c.d
 // void wiz_set_gateway(uint8_t a, uint8_t b, uint8_t c, uint8_t d) 
 // {
 //     wiz_write(GATEWAY_1, a); 
@@ -93,41 +93,41 @@ uint8_t wiz_read(uint16_t addr)
 // }
 
 // prints ip addr to serial
-void wiz_get_ip(void)
-{
-    char ipaddr[8] = {'z','.','z','.','z','.','z','\0'};
-    ipaddr[0] = (char)wiz_read(IP_1); // returns first portion of address
-    ipaddr[2] = (char)wiz_read(IP_2);
-    ipaddr[4] = (char)wiz_read(IP_3);
-    ipaddr[6] = (char)wiz_read(IP_4);
-    // serial_txstring(ipaddr);
+// void wiz_get_ip(void)
+// {
+//     char ipaddr[8] = {'z','.','z','.','z','.','z','\0'};
+//     ipaddr[0] = (char)wiz_read(IP_1); // returns first portion of address
+//     ipaddr[2] = (char)wiz_read(IP_2);
+//     ipaddr[4] = (char)wiz_read(IP_3);
+//     ipaddr[6] = (char)wiz_read(IP_4);
+//     // serial_txstring(ipaddr);
 
-}
+// }
 
-// prints subnet addr to serial
-void wiz_get_subnet(void)
-{
-    char subnet[8] = {'z','.','z','.','z','.','z','\0'};
-    subnet[0] = (char)wiz_read(SUBNET_1); // returns first portion of address
-    subnet[2] = (char)wiz_read(SUBNET_2);
-    subnet[4] = (char)wiz_read(SUBNET_3);
-    subnet[6] = (char)wiz_read(SUBNET_4);
-    // serial_txstring(subnet);
+// // prints subnet addr to serial
+// void wiz_get_subnet(void)
+// {
+//     char subnet[8] = {'z','.','z','.','z','.','z','\0'};
+//     subnet[0] = (char)wiz_read(SUBNET_1); // returns first portion of address
+//     subnet[2] = (char)wiz_read(SUBNET_2);
+//     subnet[4] = (char)wiz_read(SUBNET_3);
+//     subnet[6] = (char)wiz_read(SUBNET_4);
+//     // serial_txstring(subnet);
 
-}
+// }
 
 // prints mac to serial
-void wiz_get_mac(void)
-{
-    char mac[12] = {'z','.','z','.','z','.','z','.','z','.','z','\0'};
-    mac[0] = (char)wiz_read(MAC_1); // returns first portion of address
-    mac[2] = (char)wiz_read(MAC_2); 
-    mac[4] = (char)wiz_read(MAC_3); 
-    mac[6] = (char)wiz_read(MAC_4); 
-    mac[8] = (char)wiz_read(MAC_5); 
-    mac[10] = (char)wiz_read(MAC_6); 
+// void wiz_get_mac(void)
+// {
+//     char mac[12] = {'z','.','z','.','z','.','z','.','z','.','z','\0'};
+//     mac[0] = (char)wiz_read(MAC_1); // returns first portion of address
+//     mac[2] = (char)wiz_read(MAC_2); 
+//     mac[4] = (char)wiz_read(MAC_3); 
+//     mac[6] = (char)wiz_read(MAC_4); 
+//     mac[8] = (char)wiz_read(MAC_5); 
+//     mac[10] = (char)wiz_read(MAC_6); 
     
-}
+// }
 // // set subnet address a.b.c.d
 // void wiz_set_subnet(uint8_t a, uint8_t b, uint8_t c, uint8_t d) 
 // {

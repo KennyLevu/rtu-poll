@@ -99,6 +99,7 @@ void serial_ln(void)
     while(TI == 0);
         TI = 0;   
 }
+
 void serial_tab(void) 
 {
     SBUF='\t';
