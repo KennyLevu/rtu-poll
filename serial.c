@@ -26,16 +26,23 @@ void delay10(void)
     TR0 = 0;    // Stop Timer
     TF0 = 0;   // Clear flag
 }
-void serial_txchar(const char ch)
+void serial_txchar(char ch)
 {
     SBUF=ch;       // Load the data to be transmitted
     while(TI == 0);    // Wait till the data is trasmitted
         TI = 0;         //Clear the flag for next cycle.
 }
-void serial_txstring(const char *string_ptr)
+void serial_txstring(char *string_ptr)
 {
-          while(*string_ptr)
-           serial_txchar(*string_ptr++);
+    // while(string_ptr != '\0') {
+    //     serial_txchar(*string_ptr);
+    //     string_ptr++;
+    // }
+    // \r\nCOM\0
+
+          while(*string_ptr) {
+            serial_txchar(*string_ptr++);
+          }
 }
 
 // converts byte to 1 byte hex representation with a bit mask and digit dictionary

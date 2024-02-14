@@ -3,22 +3,21 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 #include "periph.h"
 #include "constant.h"
 #include "serial.h"
 #include "wiz.h"
 
 uint8_t rtu = '0';
+uint8_t serial_in[22] = {'\0'};
+uint8_t serial_pt = 0;
 // uint8_t gate[4] = {0};
 // uint8_t subnet[4] = {0};
 // uint8_t ip[4] = {0};
 // uint8_t mac[6] = {0};
 // bool mode = UDP;
 // uint16_t port = 5000;
-
-
-uint8_t serial_in[22] = {'\0'};
-uint8_t serial_pt = 0;
 
 void serial_txreg(uint16_t addr)
 {
@@ -118,7 +117,7 @@ void udp_open(void)
         if (wiz_read(SOCKET0_STAT) != SOCK_UDP) {
             wiz_write(SOCKET0_COM, CLOSED); // socket not initialized, retry
         } else {
-            serial_txstring("UDP Socket 0 port 5000 open\r\n");
+            serial_txstring("UDP Socket 0 port 5000 open\r\n\0");
             break;
         }
     }
@@ -126,7 +125,7 @@ void udp_open(void)
 
 void udp_tx(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint8_t ip4, uint16_t port, uint16_t data_size, uint8_t *data)
 {
-    // serial_txstring("Destination: ");
+    // serial_txstring("Destination: \0");
     // serial_txnum(ip1);
     // serial_txchar('.');
     // serial_txnum(ip2);
@@ -134,9 +133,9 @@ void udp_tx(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint8_t ip4, uint16_t port, u
     // serial_txnum(ip3);
     // serial_txchar('.');
     // serial_txnum(ip4);
-    // serial_txstring("\tport: ");
+    // serial_txstring("\tport: \0");
     // serial_txnum(port);
-    // serial_txstring("\tData: ");
+    // serial_txstring("\tData: \0");
     // serial_txstring(data);
 
 
@@ -164,13 +163,13 @@ void udp_tx(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint8_t ip4, uint16_t port, u
     
     /* Get start address*/
     tx_start_addr = SOCKET0_TX_BASE + tx_offset;
-    // serial_txstring("\t start ");
+    // serial_txstring("\t start \0");
     // serial_txnum(tx_start_addr);
     // serial_ln();
 
     /* Overflow write to base address if overflow memory */
     if ( (tx_offset + data_size) > RXTX_MASK + 1) {
-    serial_txstring("\t overflow \r\n");
+    serial_txstring("\t overflow \r\n\0");
         // copy upper_size bytes to start addr
         upper_size = (RXTX_MASK + 1) - tx_offset;
         wiz_write_buf(tx_start_addr, upper_size, data);
@@ -178,9 +177,9 @@ void udp_tx(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint8_t ip4, uint16_t port, u
         wiz_write_buf(SOCKET0_TX_BASE, left_size, data + upper_size);
     }
     else {
-    // serial_txstring("\t writing \r\n");
+    // serial_txstring("\t writing \r\n\0");
 
-        // serial_txstring("buf:");
+        // serial_txstring("buf:\0");
         wiz_write_buf(tx_start_addr, data_size, data);
         // for (int i = 0; i < data_size; i++) {
         //     // serial_txnum(tx_start_addr + i);
@@ -197,10 +196,10 @@ void udp_tx(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint8_t ip4, uint16_t port, u
     // while(1) {
     wiz_write(SOCKET0_COM, SEND);
     if (wiz_read(SOCKET0_COM == 0x00)) {
-        serial_txstring("Send complete\r\n");
+        serial_txstring("Send complete\r\n\0");
     } else if (wiz_read(SOCKET0_IR) & 0x08) {
         // check timeout bit
-        serial_txstring("\r\nSend failed\r\n");
+        serial_txstring("\r\nSend failed\r\n\0");
     }
 // }
 }   
@@ -208,8 +207,8 @@ void udp_tx(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint8_t ip4, uint16_t port, u
 
 void udp_rx_helper(void) 
 {
-    // serial_txstring("------------------\r\n");
-    serial_txstring("UDP Packet Received\r\n");
+    // serial_txstring("------------------\r\n\0");
+    serial_txstring("UDP Packet Received\r\n\0");
     uint16_t rx_offset, rx_start_addr, upper_size, left_size; // upper size stores uper size of start address, left stores left size of base addr
     uint8_t rxsizu, rxsizl; // stores upper and lower half of rx register size
     uint16_t peer_port = 0x0000, data_size = 0x0000, rxrd = 0x0000;
@@ -231,7 +230,7 @@ void udp_rx_helper(void)
 
     /* Get start (physical) address*/
     rx_start_addr = SOCKET0_RX_BASE + rx_offset;
-    // serial_txstring("\t start_addr: ");
+    // serial_txstring("\t start_addr: \0");
     // serial_txnum(rx_start_addr);
 
     /* Read header information 
@@ -248,7 +247,7 @@ void udp_rx_helper(void)
         2. get remote information and data size from header 
     */
     if ( (rx_offset + UDP_HEADER_SIZE) > (RXTX_MASK + 1) ) {
-        serial_txstring("\r\nUDP RX Header Overflow Detected\r\n");
+        serial_txstring("\r\nUDP RX Header Overflow Detected\r\n\0");
         upper_size = (RXTX_MASK + 1) - rx_offset; // get difference between end of buffer and offset
         wiz_read_buf(rx_start_addr, upper_size, peer_header); 
         left_size = UDP_HEADER_SIZE - upper_size; // get the remaining amount of data 
@@ -272,16 +271,16 @@ void udp_rx_helper(void)
     data_size = data_size | (peer_header[6] << 8);
     data_size = data_size | peer_header[7];
 
-    serial_txstring("Sender IP: ");
+    serial_txstring("Sender IP: \0");
     for (int i = 0; i < 4; i++) {
         serial_txnum(peer_header[i]);
         if (i < 3) {
             serial_txchar('.');
         }
     }
-    serial_txstring("\tSender Port: ");
+    serial_txstring("\tSender Port: \0");
     serial_txnum(peer_port);
-    serial_txstring("\tRX Size: ");
+    serial_txstring("\tRX Size: \0");
     serial_txnum(rx_size);
     serial_ln();
 
@@ -293,7 +292,7 @@ void udp_rx_helper(void)
             - Read data in two parts
     */
     if( (rx_offset + rx_size) > (RXTX_MASK + 1) ) {
-        serial_txstring("\r\nUDP RX DATA Overflow Detected\r\n");
+        serial_txstring("\r\nUDP RX DATA Overflow Detected\r\n\0");
         upper_size = (RXTX_MASK + 1) - rx_offset; // get first part of data
         wiz_read_buf(rx_start_addr, upper_size, peer_data);
         left_size = data_size - upper_size; // get remaining data 
@@ -302,7 +301,7 @@ void udp_rx_helper(void)
     else {
         wiz_read_buf(rx_start_addr, data_size, peer_data);
     }
-    serial_txstring("\rRESPONSE: ");
+    serial_txstring("\rRESPONSE: \0");
     if (peer_data[0] == rtu) {
         for (int i = 0; i < data_size; i++) { // Convert to uppercase
             if (peer_data[i] >= 'a' && peer_data[i] <= 'z' ) {
@@ -316,18 +315,18 @@ void udp_rx_helper(void)
         udp_tx(peer_header[0], peer_header[1], peer_header[2], peer_header[3], peer_port, data_size, peer_data);
     }
     else {
-        serial_txstring("Incorrect format or wrong RTU");
-        udp_tx(peer_header[0], peer_header[1], peer_header[2], peer_header[3], peer_port, 29, "Incorrect format or wrong RTU");
+        serial_txstring("Incorrect format or wrong RTU\0");
+        udp_tx(peer_header[0], peer_header[1], peer_header[2], peer_header[3], peer_port, 29, "Incorrect format or wrong RTU\0");
     }
     
     serial_ln();
-    serial_txstring("\r------------------\r\n");
+    serial_txstring("\r------------------\r\n\0");
     /* increase Sn_RX_RD as length of received packet*/
     rxrd += data_size + UDP_HEADER_SIZE;
     // store upper and lower halves
     wiz_write(SOCKET0_RXRDU, (rxrd >> 8) & 0xff);
     wiz_write(SOCKET0_RXRDL, rxrd&0xff);
-    // serial_txstring("rxrd pointer end: ");
+    // serial_txstring("rxrd pointer end: \0");
     // Set received command
     wiz_write(SOCKET0_COM, RECV);
     // Clear s0_ir register by writing 1s
@@ -355,79 +354,79 @@ void setup(void)
 }
 
 void interface(void) {
-    // serial_txstring("RTU: ");
+    // serial_txstring("RTU: \0");
     // // DO RTU
-    // serial_txstring("\tGATE: ");
+    // serial_txstring("\tGATE: \0");
     // // DO GATE
-    // serial_txstring("\tSUBNET: ");
+    // serial_txstring("\tSUBNET: \0");
     // // DO SUB
-    // serial_txstring("\tIP: ");
+    // serial_txstring("\tIP: \0");
     // // DO IP
-    // serial_txstring("\tMAC: ");
+    // serial_txstring("\tMAC: \0");
     // // DO MAC
-    // serial_txstring("\r\nMODE: ");
+    // serial_txstring("\r\nMODE: \0");
     // // DO MODE
-    // serial_txstring("\tPORT: ");
+    // serial_txstring("\tPORT: \0");
     // // DO PORT
-    // serial_txstring("------------------\r\n");
+    // serial_txstring("------------------\r\n\0");
 }
 
 void print_config(void) {
 
-    serial_txstring("****************************************************\r\n");
-    serial_txstring("Set/Change RTU Address (0-9): USING RTU=<# 0-9>\r\n");
-    serial_txstring("Set/Change IP Address: USING IP=<###.###.###.###>\r\n");
-    serial_txstring("Set/Change Subnet Mask: USING SUB=<###.###.###.###>\r\n");
-    serial_txstring("Set/Change Gateway: USING GATE=<###.###.###.###>\r\n");
-    serial_txstring("Set/Change MAC Address: USING MAC=<0F:0F:0F:0F:0F:0F>\r\n");
-    serial_txstring("****************************************************\r\n");
+    // serial_txstring("****************************************************\r\n\0");
+    // serial_txstring("Set/Change RTU Address (0-9): USING RTU=<# 0-9>\r\n\0");
+    // serial_txstring("Set/Change IP Address: USING IP=<###.###.###.###>\r\n\0");
+    // serial_txstring("Set/Change Subnet Mask: USING SUB=<###.###.###.###>\r\n\0");
+    // serial_txstring("Set/Change Gateway: USING GATE=<###.###.###.###>\r\n\0");
+    // serial_txstring("Set/Change MAC Address: USING MAC=<0F:0F:0F:0F:0F:0F>\r\n\0");
+    // serial_txstring("****************************************************\r\n\0");
 
-    serial_txstring("WizNet Adapter:\r\n");
+    serial_txstring("WizNet Adapter:\r\n\0");
 
-    serial_txstring("   IPv4 Address  . . : ");
-    serial_txnum(wiz_read(IP_1));
-    serial_txchar('.');
-    serial_txnum(wiz_read(IP_2));
-    serial_txchar('.');
-    serial_txnum(wiz_read(IP_3));
-    serial_txchar('.');
-    serial_txnum(wiz_read(IP_4));
-    serial_txstring("\r\n");
+    // serial_txstring("   IPv4 Address  . . : \0");
+    // serial_txnum(wiz_read(IP_1));
+    // serial_txchar('.');
+    // serial_txnum(wiz_read(IP_2));
+    // serial_txchar('.');
+    // serial_txnum(wiz_read(IP_3));
+    // serial_txchar('.');
+    // serial_txnum(wiz_read(IP_4));
+    // serial_txstring("\r\n\0");
 
-    serial_txstring("   RTU Address . . . : ");
-    serial_txchar('#');
-    serial_txnum(rtu);
-    serial_txstring("\r\n");
+    // serial_txstring("   RTU Address . . . : \0");
+    // serial_txchar('#');
+    // serial_txnum(rtu);
+    // serial_txstring("\r\n\0");
 
-    serial_txstring("   Subnet Mask . . . : ");
-    serial_txnum(wiz_read(SUBNET_1));
-    serial_txchar('.');
-    serial_txnum(wiz_read(SUBNET_2));
-    serial_txchar('.');
-    serial_txnum(wiz_read(SUBNET_3));
-    serial_txchar('.');
-    serial_txnum(wiz_read(SUBNET_4));
-    serial_txstring("\r\n");
+    // serial_txstring("   Subnet Mask . . . : \0");
+    // serial_txnum(wiz_read(SUBNET_1));
+    // serial_txchar('.');
+    // serial_txnum(wiz_read(SUBNET_2));
+    // serial_txchar('.');
+    // serial_txnum(wiz_read(SUBNET_3));
+    // serial_txchar('.');
+    // serial_txnum(wiz_read(SUBNET_4));
+    // serial_txstring("\r\n\0");
 
-    serial_txstring("   Gateway Address . : ");
-    serial_txnum(wiz_read(GATEWAY_1));
-    serial_txchar('.');
-    serial_txnum(wiz_read(GATEWAY_2));
-    serial_txchar('.');
-    serial_txnum(wiz_read(GATEWAY_3));
-    serial_txchar('.');
-    serial_txnum(wiz_read(GATEWAY_4));
-    serial_txstring("\r\n");
+    // serial_txstring("   Gateway Address . : \0");
+    // serial_txnum(wiz_read(GATEWAY_1));
+    // serial_txchar('.');
+    // serial_txnum(wiz_read(GATEWAY_2));
+    // serial_txchar('.');
+    // serial_txnum(wiz_read(GATEWAY_3));
+    // serial_txchar('.');
+    // serial_txnum(wiz_read(GATEWAY_4));
+    // serial_txstring("\r\n\0");
 
-    serial_txstring("   MAC Address . . . : ");
-    serial_txhex(wiz_read(MAC_1));
-    serial_txhex(wiz_read(MAC_2));
-    serial_txhex(wiz_read(MAC_3));
-    serial_txhex(wiz_read(MAC_4));
-    serial_txhex(wiz_read(MAC_5));
-    serial_txhex(wiz_read(MAC_6));
-    serial_txstring("\n");
-    serial_txstring("\r\n");
+    // serial_txstring("   MAC Address . . . : \0\0");
+    // serial_txhex(wiz_read(MAC_1));
+    // serial_txhex(wiz_read(MAC_2));
+    // serial_txhex(wiz_read(MAC_3));
+    // serial_txhex(wiz_read(MAC_4));
+    // serial_txhex(wiz_read(MAC_5));
+    // serial_txhex(wiz_read(MAC_6));
+    // serial_txstring("\n\0");
+    // serial_txstring("\r\n\0");
 
 
 
@@ -440,7 +439,9 @@ void main(void)
     wiz_init();
     udp_open(); // open udp socket
     uint8_t read;
+    // serial_txstring("Program started");
 	while (1) {
+    // serial_txstring("Program started");
         udp_rx();
         read = RX_data(); // get character from terminal
         // if (read != 0) {
@@ -448,7 +449,11 @@ void main(void)
         // }
 
         /* Take input from valid keys and store in buffer*/
-        if (read >= '.' && read <= 'z' && serial_pt < 21) {
+        if (((read >= '0' && read <= '9') 
+            || (read >= 'a' && read <= 'z') 
+                || (read >= 'A' && read <= 'Z') 
+                    || (read == SPACE) || (read == '.') || (read == ':') || (read == '?') )
+            && serial_pt < 21) {
             serial_in[serial_pt] = read;
             serial_pt++;
             serial_txchar(read);
@@ -462,25 +467,27 @@ void main(void)
             serial_txchar(BACK); // set cursor back
         }
 
-        if (read == ENTER && serial_pt != 0) {
+        if (read == ENTER && serial_pt > 0) {
             // serial_txnum(read);
+            serial_in[serial_pt] = '\0';
             serial_txstring("\r\nCOM>");
             serial_txstring(serial_in);
             serial_txstring("\r\n");
-            // serial_txchar(13);
-            // serial_txchar(10);
             // // evaluate config menu
-            // if (serial_pt == 1 && serial_in[0] == '?') {
-            //     print_config();
-            // } else {
-            //     serial_txstring("\r\nInvalid Command, type '?' for more details\r\n");
-            // }
+            if (serial_pt == 1 && serial_in[0] == '?') {
+                print_config();
+            } else {
+                serial_txstring("Invalid Command\r\n\0");
+            }
 
             // clear buffer
-            for (; serial_pt > 0; serial_pt--) {
-                serial_in[serial_pt] = '\0';
+            for (int i = 0; i < 22; i++) {
+                serial_in[i] = '\0';
             }
-            // serial_txstring("\r\n>");
+            serial_pt = 0;
+            // for (; serial_pt > 0; serial_pt--) {
+            //     serial_in[serial_pt] = '\0';
+            // }
         }
     }
 
