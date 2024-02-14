@@ -34,14 +34,12 @@ void serial_txchar(char ch)
 }
 void serial_txstring(char *string_ptr)
 {
-    // while(string_ptr != '\0') {
-    //     serial_txchar(*string_ptr);
-    //     string_ptr++;
-    // }
-    // \r\nCOM\0
 
           while(*string_ptr) {
-            serial_txchar(*string_ptr++);
+            SBUF=*string_ptr++;       // Load the data to be transmitted
+            while(TI == 0);    // Wait till the data is trasmitted
+                TI = 0;    
+            // serial_txchar(*string_ptr++);
           }
 }
 
@@ -60,37 +58,60 @@ void serial_txhex(uint8_t val) {
 }
 
 
-void byte_to_ascii(uint16_t num, char *ascii_str) 
+// void byte_to_ascii(uint16_t num, char *ascii_str) 
+// {
+//     // Convert each digit to its ASCII representation
+//     if (num >= 10000) {
+//         ascii_str[0] = '0' + (num / 10000);  // Ten thousands place
+//         ascii_str[1] = '0' + ((num / 1000) % 10);  // Thousands place
+//         ascii_str[2] = '0' + ((num / 100) % 10);  // Hundreds place
+//         ascii_str[3] = '0' + ((num / 10) % 10);  // Tens place
+//         ascii_str[4] = '0' + (num % 10);  // Ones place
+//         ascii_str[5] = '\0';  // Null-terminate the string
+//     }
+//      else if (num >= 1000) {
+//         ascii_str[0] = '0' + (num / 1000);
+//         ascii_str[1] = '0' + ((num / 100) % 10);
+//         ascii_str[2] = '0' + ((num / 10) % 10);
+//         ascii_str[3] = '0' + (num % 10);
+//         ascii_str[4] = '\0';
+//     }
+//     else if (num >= 100) {
+//         ascii_str[0] = '0' + (num / 100);
+//         ascii_str[1] = '0' + ((num / 10) % 10);
+//         ascii_str[2] = '0' + (num % 10);
+//         ascii_str[3] = '\0';
+//     } else if (num >= 10) {
+//         ascii_str[0] = '0' + (num / 10);
+//         ascii_str[1] = '0' + (num % 10);
+//         ascii_str[2] = '\0';
+//     } else {
+//         ascii_str[0] = '0' + num;
+//         ascii_str[1] = '\0';
+//     }
+// }
+
+// https://opensource.apple.com/source/groff/groff-10/groff/libgroff/itoa.c
+char *itoa(uint16_t i) 
 {
-    // Convert each digit to its ASCII representation
-    if (num >= 10000) {
-        ascii_str[0] = '0' + (num / 10000);  // Ten thousands place
-        ascii_str[1] = '0' + ((num / 1000) % 10);  // Thousands place
-        ascii_str[2] = '0' + ((num / 100) % 10);  // Hundreds place
-        ascii_str[3] = '0' + ((num / 10) % 10);  // Tens place
-        ascii_str[4] = '0' + (num % 10);  // Ones place
-        ascii_str[5] = '\0';  // Null-terminate the string
-    }
-     else if (num >= 1000) {
-        ascii_str[0] = '0' + (num / 1000);
-        ascii_str[1] = '0' + ((num / 100) % 10);
-        ascii_str[2] = '0' + ((num / 10) % 10);
-        ascii_str[3] = '0' + (num % 10);
-        ascii_str[4] = '\0';
-    }
-    else if (num >= 100) {
-        ascii_str[0] = '0' + (num / 100);
-        ascii_str[1] = '0' + ((num / 10) % 10);
-        ascii_str[2] = '0' + (num % 10);
-        ascii_str[3] = '\0';
-    } else if (num >= 10) {
-        ascii_str[0] = '0' + (num / 10);
-        ascii_str[1] = '0' + (num % 10);
-        ascii_str[2] = '\0';
-    } else {
-        ascii_str[0] = '0' + num;
-        ascii_str[1] = '\0';
-    }
+  /* Room for INT_DIGITS digits, - and '\0' */
+  static char buf[5 + 1]; // 5 + 2 --> 5 + 1 for no negatives
+  char *p = buf + 5;	/* points to terminating '\0' */
+//   if (i >= 0) {
+    do {
+      *--p = '0' + (i % 10);
+      i /= 10;
+    } while (i != 0);
+    return p;
+//   }
+//   else {			/* i < 0 */
+//     do {
+//       *--p = '0' - (i % 10);
+//       i /= 10;
+//     } while (i != 0);
+//     *--p = '-';
+//   }
+//   return p;
 }
 
 void serial_ln(void) 
@@ -108,12 +129,12 @@ void serial_tab(void)
 }
 
 
-void serial_txnum(uint16_t val)
-{
-    char str[6] = {'\0'};
-    byte_to_ascii(val, str);
-    serial_txstring(str);
-}
+// void serial_txnum(uint16_t val)
+// {
+//     char str[6] = {'\0'};
+//     byte_to_ascii(val, str);
+//     serial_txstring(str);
+// }
 
 // void serial_txreg(uint16_t addr)
 // {
