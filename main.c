@@ -2,8 +2,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
 #include "periph.h"
 #include "constant.h"
 #include "serial.h"
@@ -12,12 +10,29 @@
 uint8_t rtu = '0';
 uint8_t serial_in[22] = {'\0'};
 uint8_t serial_pt = 0;
-// uint8_t gate[4] = {0};
-// uint8_t subnet[4] = {0};
-// uint8_t ip[4] = {0};
-// uint8_t mac[6] = {0};
-// bool mode = UDP;
-// uint16_t port = 5000;
+static const char com_rtu[5] = "RTU=";
+static const char com_ip[4] = "IP=";
+static const char com_sub[5] = "SUB=";
+static const char com_gate[6] = "GATE=";
+static const char com_mac[5] = "MAC=";
+
+bool better_strncmp(char* check, uint8_t len) 
+{
+    for (uint8_t i = 0; i < len; i++) {
+        if (serial_in[i] != check[i]) {
+            return false;
+        }
+    }
+    return true;
+} 
+// uint8_t com_check(void) 
+// {
+//     if (better_strncmp("IP=",3) == true) {
+//     //     serial_txstring("change ip\r\n");
+//         return 0;
+//     }
+//     return 0;
+// }
 
 void serial_txreg(uint16_t addr)
 {
@@ -125,19 +140,6 @@ void udp_open(void)
 
 void udp_tx(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint8_t ip4, uint16_t port, uint16_t data_size, uint8_t *data)
 {
-    // serial_txstring("Destination: \0");
-    // serial_txnum(ip1);
-    // serial_txchar('.');
-    // serial_txnum(ip2);
-    // serial_txchar('.');
-    // serial_txnum(ip3);
-    // serial_txchar('.');
-    // serial_txnum(ip4);
-    // serial_txstring("\tport: \0");
-    // serial_txnum(port);
-    // serial_txstring("\tData: \0");
-    // serial_txstring(data);
-
 
     uint16_t tx_free = 0x0000, txwr = 0x0000; 
     uint16_t tx_offset, tx_start_addr, upper_size, left_size;
@@ -177,15 +179,7 @@ void udp_tx(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint8_t ip4, uint16_t port, u
         wiz_write_buf(SOCKET0_TX_BASE, left_size, data + upper_size);
     }
     else {
-    // serial_txstring("\t writing \r\n\0");
-
-        // serial_txstring("buf:\0");
         wiz_write_buf(tx_start_addr, data_size, data);
-        // for (int i = 0; i < data_size; i++) {
-        //     // serial_txnum(tx_start_addr + i);
-        //     serial_txchar(data[i]);
-        //     wiz_write(tx_start_addr + i, data[i]);
-        // }
     }
 
 
@@ -208,7 +202,6 @@ void udp_tx(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint8_t ip4, uint16_t port, u
 void udp_rx_helper(void) 
 {
     // serial_txstring("------------------\r\n\0");
-    serial_txstring("UDP Packet Received\r\n\0");
     uint16_t rx_offset, rx_start_addr, upper_size, left_size; // upper size stores uper size of start address, left stores left size of base addr
     uint8_t rxsizu, rxsizl; // stores upper and lower half of rx register size
     uint16_t peer_port = 0x0000, data_size = 0x0000, rxrd = 0x0000;
@@ -247,7 +240,7 @@ void udp_rx_helper(void)
         2. get remote information and data size from header 
     */
     if ( (rx_offset + UDP_HEADER_SIZE) > (RXTX_MASK + 1) ) {
-        serial_txstring("\r\nUDP RX Header Overflow Detected\r\n\0");
+        serial_txstring("Overflow");
         upper_size = (RXTX_MASK + 1) - rx_offset; // get difference between end of buffer and offset
         wiz_read_buf(rx_start_addr, upper_size, peer_header); 
         left_size = UDP_HEADER_SIZE - upper_size; // get the remaining amount of data 
@@ -271,16 +264,16 @@ void udp_rx_helper(void)
     data_size = data_size | (peer_header[6] << 8);
     data_size = data_size | peer_header[7];
 
-    serial_txstring("Sender IP: \0");
+    serial_txstring("Sender IP: ");
     for (int i = 0; i < 4; i++) {
         serial_txnum(peer_header[i]);
         if (i < 3) {
             serial_txchar('.');
         }
     }
-    serial_txstring("\tSender Port: \0");
+    serial_txstring("\tSender Port: ");
     serial_txnum(peer_port);
-    serial_txstring("\tRX Size: \0");
+    serial_txstring("\tRX Size: ");
     serial_txnum(rx_size);
     serial_ln();
 
@@ -292,7 +285,7 @@ void udp_rx_helper(void)
             - Read data in two parts
     */
     if( (rx_offset + rx_size) > (RXTX_MASK + 1) ) {
-        serial_txstring("\r\nUDP RX DATA Overflow Detected\r\n\0");
+        serial_txstring("Overflow");
         upper_size = (RXTX_MASK + 1) - rx_offset; // get first part of data
         wiz_read_buf(rx_start_addr, upper_size, peer_data);
         left_size = data_size - upper_size; // get remaining data 
@@ -301,7 +294,7 @@ void udp_rx_helper(void)
     else {
         wiz_read_buf(rx_start_addr, data_size, peer_data);
     }
-    serial_txstring("\rRESPONSE: \0");
+    serial_txstring("\rRESPONSE: ");
     if (peer_data[0] == rtu) {
         for (int i = 0; i < data_size; i++) { // Convert to uppercase
             if (peer_data[i] >= 'a' && peer_data[i] <= 'z' ) {
@@ -315,7 +308,7 @@ void udp_rx_helper(void)
         udp_tx(peer_header[0], peer_header[1], peer_header[2], peer_header[3], peer_port, data_size, peer_data);
     }
     else {
-        serial_txstring("Incorrect format or wrong RTU\0");
+        serial_txstring("Wrong RTU");
         udp_tx(peer_header[0], peer_header[1], peer_header[2], peer_header[3], peer_port, 29, "Incorrect format or wrong RTU\0");
     }
     
@@ -432,7 +425,7 @@ void main(void)
         if (((read >= '0' && read <= '9') 
             || (read >= 'a' && read <= 'z') 
                 || (read >= 'A' && read <= 'Z') 
-                    || (read == SPACE) || (read == '.') || (read == ':') || (read == '?') )
+                    || (read == SPACE) || (read == '.') || (read == ':') || (read == '?') || (read == '=') )
             && serial_pt < 21) {
             serial_in[serial_pt] = read;
             serial_pt++;
@@ -457,7 +450,24 @@ void main(void)
             if (serial_pt == 1 && serial_in[0] == '?') {
                 print_config();
             } else {
-                serial_txstring("Invalid, try <?>\r\n\0");
+                if (better_strncmp("IP=", 3)) {
+                    serial_txchar('2\n');
+                } 
+                else if(better_strncmp("RTU=", 4)) {
+                    serial_txchar('1');
+                }
+                else if(better_strncmp("SUB=", 4)) {
+                    serial_txchar('3');
+                }
+                else if(better_strncmp("MAC=", 4)) {
+                    serial_txchar('5');
+                }
+                else if(better_strncmp("GATE=", 5)) {
+                    serial_txchar('4');
+                }
+                else {
+                    serial_txstring("Invalid, try <?>\r\n");
+                }
             }
 
             // clear buffer
