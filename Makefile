@@ -6,6 +6,8 @@ STCGAL = stcgal
 
 # SDCC compiler flags
 SDCC_FLAGS = --model-small --stack-auto
+# SDCC_FLAGS = --model-small
+
 
 # STCGAL settings
 STCGAL_PORT = COM8
