@@ -9,7 +9,7 @@
 #include "serial.h"
 #include "wiz.h"
 
-uint8_t rtu = 0;
+char rtu[2] = "0";
 uint8_t serial_in[22] = {'\0'};
 uint8_t serial_pt = 0;
 uint8_t addr[4] = {0};
@@ -76,7 +76,8 @@ void serial_txreg(uint16_t addr)
 {
     // serial_txnum(wiz_read(addr));
     serial_txstring(itoa(wiz_read(addr)));
-    serial_ln();
+    serial_txchar('\n');
+    // serial_ln();
 }
 
 void serial_tx2reg(uint16_t upper, uint16_t lower)
@@ -88,8 +89,8 @@ void serial_tx2reg(uint16_t upper, uint16_t lower)
     combined = combined | (up << 8);
     // serial_txnum(combined);
     serial_txstring(itoa(combined));
-
-    serial_ln();
+    serial_txchar('\n');
+    // serial_ln();
 }
 
 // Initialize network
@@ -144,24 +145,22 @@ void wiz_init(void)
     /* Bind sockets to port numbers */
     wiz_write(SOCKET0_PORT_U, 0x13);
     wiz_write(SOCKET0_PORT_L, 0x88);
-    // wiz_set_port(0,0x13,0x88); // set socket 0 udp port to 5000 0x1388
-    // wiz_set_port(1,0x13,0xec);   // set socket 1 tcp port to 5100 0x13ec
 
-    
-    /* Initialize TCP Socket*/
-    // while (tcp_open != true) {
-    //     wiz_write(SOCKET1_COM, OPEN);
-    //     if (wiz_read(SOCKET1_STAT) != SOCK_INIT) {
-    //         wiz_write(SOCKET1_COM, CLOSED);
-    //         continue;
-    //     } 
-    //     wiz_write(SOCKET1_COM, LISTEN);
-    //     if (wiz_read(SOCKET1_STAT) != SOCK_LISTEN) {
-    //         wiz_write(SOCKET1_COM, CLOSED);
-    //     } else {
-    //         tcp_open = true;
-    //     }
-    // } 
+                
+                /* Initialize TCP Socket*/
+                // while (tcp_open != true) {
+                //     wiz_write(SOCKET1_COM, OPEN);
+                //     if (wiz_read(SOCKET1_STAT) != SOCK_INIT) {
+                //         wiz_write(SOCKET1_COM, CLOSED);
+                //         continue;
+                //     } 
+                //     wiz_write(SOCKET1_COM, LISTEN);
+                //     if (wiz_read(SOCKET1_STAT) != SOCK_LISTEN) {
+                //         wiz_write(SOCKET1_COM, CLOSED);
+                //     } else {
+                //         tcp_open = true;
+                //     }
+                // } 
 
 }
 
@@ -321,7 +320,8 @@ void udp_rx_helper(void)
     serial_txstring("\tRX Size: ");
     // serial_txnum(rx_size);
     serial_txstring(itoa(rx_size));
-    serial_ln();
+    serial_txchar('\n');
+    // serial_ln();
 
     // Allocate buffer for data size
     peer_data = malloc(sizeof(uint8_t) * data_size);
@@ -341,7 +341,9 @@ void udp_rx_helper(void)
         wiz_read_buf(rx_start_addr, data_size, peer_data);
     }
     serial_txstring("\rRESPONSE: ");
-    if (peer_data[0] == rtu) {
+    serial_txstring("Peer data: ");
+    serial_txchar(peer_data[0]);
+    if (peer_data[0] == rtu[0]) {
         for (int i = 0; i < data_size; i++) { // Convert to uppercase
             if (peer_data[i] >= 'a' && peer_data[i] <= 'z' ) {
                 peer_data[i] = peer_data[i] - 32;
@@ -358,7 +360,8 @@ void udp_rx_helper(void)
         udp_tx(peer_header[0], peer_header[1], peer_header[2], peer_header[3], peer_port, 29, "Incorrect format or wrong RTU\0");
     }
     
-    serial_ln();
+    serial_txchar('\n');
+    // serial_ln();
     serial_txstring("\r------------------\r\n\0");
     /* increase Sn_RX_RD as length of received packet*/
     rxrd += data_size + UDP_HEADER_SIZE;
@@ -376,6 +379,7 @@ void udp_rx_helper(void)
 void udp_rx(void) 
 {
     if (wiz_read(SOCKET0_IR) & 0x04) { // check for Recv interrupt (bit 2/ 100 / x04)
+    serial_txstring("WHY DOES THIS HAPPENT O ME");
         udp_rx_helper();
     }
 }
@@ -415,7 +419,7 @@ void print_config(void) {
 
     serial_txstring("   RTU Address . . . : ");
     // serial_txnum(rtu);
-    serial_txstring(itoa(rtu));
+    serial_txstring(rtu);
     serial_txstring("\r\n");
 
     serial_txstring("   Subnet Mask . . . : ");
@@ -504,54 +508,55 @@ void main(void)
             serial_txchar(BACK); // set cursor back
         }
 
-        if (read == ENTER && serial_pt > 0) {
-            // serial_txnum(read);
-            serial_in[serial_pt] = '\0';
-            serial_txstring("\r\nCOM>");
-            serial_txstring(serial_in);
-            serial_txstring("\r\n");
-            // // evaluate config menu
-            if (serial_pt == 1 && serial_in[0] == '?') {
-                print_config();
-            } else {
-                if (better_strncmp("IP=", 3) && addr_parse(3) ) {
-                    wiz_write(IP_1, addr[0]);
-                    wiz_write(IP_2, addr[1]);
-                    wiz_write(IP_3, addr[2]);
-                    wiz_write(IP_4, addr[3]);
-                } 
-                else if(better_strncmp("RTU=", 4) && serial_pt == 5) {
-                    if (serial_in[4] >= '0' && serial_in[4] <= '9') {
-                        rtu = serial_in[4];
-                    }
-                }
-                else if(better_strncmp("SUB=", 4) && addr_parse(4)) {
-                    wiz_write(SUBNET_1, addr[0]);
-                    wiz_write(SUBNET_2, addr[1]);
-                    wiz_write(SUBNET_3, addr[2]);
-                    wiz_write(SUBNET_4, addr[3]);
-                }
-                else if(better_strncmp("MAC=", 4)) {
-                    serial_txchar('5');
-                }
-                else if(better_strncmp("GATE=", 5) && addr_parse(5)) {
-                    wiz_write(GATEWAY_1, addr[0]);
-                    wiz_write(GATEWAY_2, addr[1]);
-                    wiz_write(GATEWAY_3, addr[2]);
-                    wiz_write(GATEWAY_4, addr[3]);
-                }
-                else {
-                    // invalid();
-                    serial_txstring("Invalid, try <?>\r\n");
-                }
-            }
+        // if (read == ENTER && serial_pt > 0) 
+        // {
+        //     // serial_txnum(read);
+        //     serial_in[serial_pt] = '\0';
+        //     serial_txstring("\r\nCOM>");
+        //     serial_txstring(serial_in);
+        //     serial_txstring("\r\n");
+        //     // // evaluate config menu
+        //     if (serial_pt == 1 && serial_in[0] == '?') {
+        //         print_config();
+        //     } else {
+        //         if (better_strncmp("IP=", 3) && addr_parse(3) ) {
+        //             wiz_write(IP_1, addr[0]);
+        //             wiz_write(IP_2, addr[1]);
+        //             wiz_write(IP_3, addr[2]);
+        //             wiz_write(IP_4, addr[3]);
+        //         } 
+        //         else if(better_strncmp("RTU=", 4) && serial_pt == 5) {
+        //             if (serial_in[4] >= '0' && serial_in[4] <= '9') {
+        //                 rtu[0] = serial_in[4];
+        //             }
+        //         }
+        //         else if(better_strncmp("SUB=", 4) && addr_parse(4)) {
+        //             wiz_write(SUBNET_1, addr[0]);
+        //             wiz_write(SUBNET_2, addr[1]);
+        //             wiz_write(SUBNET_3, addr[2]);
+        //             wiz_write(SUBNET_4, addr[3]);
+        //         }
+        //         else if(better_strncmp("MAC=", 4)) {
+        //             serial_txchar('5');
+        //         }
+        //         else if(better_strncmp("GATE=", 5) && addr_parse(5)) {
+        //             wiz_write(GATEWAY_1, addr[0]);
+        //             wiz_write(GATEWAY_2, addr[1]);
+        //             wiz_write(GATEWAY_3, addr[2]);
+        //             wiz_write(GATEWAY_4, addr[3]);
+        //         }
+        //         else {
+        //             // invalid();
+        //             serial_txstring("Invalid, try <?>\r\n");
+        //         }
+        //     }
 
-            // clear buffer
-            for (int i = 0; i < 22; i++) {
-                serial_in[i] = '\0';
-            }
-            serial_pt = 0;
-        }
+        //     // clear buffer
+        //     for (int i = 0; i < 22; i++) {
+        //         serial_in[i] = '\0';
+        //     }
+        //     serial_pt = 0;
+        // }
     }
 
 }

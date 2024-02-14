@@ -114,19 +114,19 @@ char *itoa(uint16_t i)
 //   return p;
 }
 
-void serial_ln(void) 
-{
-    SBUF='\n';
-    while(TI == 0);
-        TI = 0;   
-}
+// void serial_ln(void) 
+// {
+//     SBUF='\n';
+//     while(TI == 0);
+//         TI = 0;   
+// }
 
-void serial_tab(void) 
-{
-    SBUF='\t';
-    while(TI == 0);
-        TI = 0;   
-}
+// void serial_tab(void) 
+// {
+//     SBUF='\t';
+//     while(TI == 0);
+//         TI = 0;   
+// }
 
 
 // void serial_txnum(uint16_t val)
