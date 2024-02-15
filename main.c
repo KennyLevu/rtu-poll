@@ -402,9 +402,9 @@ void udp_rx_helper(void)
         udp_tx(peer_header[0], peer_header[1], peer_header[2], peer_header[3], peer_port, 29, "Incorrect format or wrong RTU\0");
     }
     
-    serial_txchar('\n');
+    // serial_txchar('\n');
     // serial_ln();
-    serial_txstring("\r------------------\r\n\0");
+    // serial_txstring("\r------------------\r\n\0");
     /* increase Sn_RX_RD as length of received packet*/
     rxrd += data_size + UDP_HEADER_SIZE;
     // store upper and lower halves
@@ -506,14 +506,14 @@ void print_config(void) {
     // serial_txhex(wiz_read(MAC_6));
     // serial_txstring("\n\r\n");
 
-    serial_txstring("Set MODE> MODE=");
+    serial_txstring("Set MODE> . . . . MODE=");
     serial_txstring(is_udp ? "UDP" : "TCP");
     serial_txstring("\r\n");
 
-    serial_txstring("Set RTU (0-9)> RTU=");
+    serial_txstring("Set RTU (0-9)>  . RTU=");
     serial_txstring(rtu);
 
-    serial_txstring("\r\nSet IP> IP=");
+    serial_txstring("\r\nSet IP> . . . . . IP=");
     serial_txstring(itoa(wiz_read(IP_1)));
     serial_txchar('.');
     // serial_txnum(wiz_read(IP_2));
@@ -525,7 +525,7 @@ void print_config(void) {
     // serial_txnum(wiz_read(IP_4));
     serial_txstring(itoa(wiz_read(IP_4)));
 
-    serial_txstring("\r\nSet SUBNET> SUB=");
+    serial_txstring("\r\nSet SUBNET> . . . SUB=");
     serial_txstring(itoa(wiz_read(SUBNET_1)));
     serial_txchar('.');
     // serial_txnum(wiz_read(SUBNET_2));
@@ -537,7 +537,7 @@ void print_config(void) {
     // serial_txnum(wiz_read(SUBNET_4));
     serial_txstring(itoa(wiz_read(SUBNET_4)));
 
-    serial_txstring("\r\nSet GATE> GATE=");
+    serial_txstring("\r\nSet GATE> . . . . GATE=");
      serial_txstring(itoa(wiz_read(GATEWAY_1)));
     serial_txchar('.');
     // serial_txnum(wiz_read(GATEWAY_2));
@@ -549,7 +549,7 @@ void print_config(void) {
     // serial_txnum(wiz_read(GATEWAY_4));
     serial_txstring(itoa(wiz_read(GATEWAY_4)));
 
-    serial_txstring("\r\nSet MAC> MAC=");
+    serial_txstring("\r\nSet MAC>  . . . . MAC=");
     serial_txhex(wiz_read(MAC_1));
     serial_txhex(wiz_read(MAC_2));
     serial_txhex(wiz_read(MAC_3));
