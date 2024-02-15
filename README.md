@@ -24,3 +24,5 @@ stcgal -p COM8 -P stc89 -o cpu_6t_enabled true  main.ihx
 commms:
 sdcc --model-small main.c
 stcgal -p COM8 -P stc89 -o cpu_6t_enabled=true  main.ihx
+
+

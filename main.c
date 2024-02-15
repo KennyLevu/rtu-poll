@@ -33,7 +33,7 @@ bool better_strncmp(char* check, uint8_t len)
 
 bool hex_parse(void) {
     if (serial_pt != 16) {
-        return false
+        return false;
     }
     // loop over buffer for max address length after MAC=
     char hex[3] = {'\0'};
@@ -41,7 +41,7 @@ bool hex_parse(void) {
         if (isalnum(serial_in[i]) && isalnum(serial_in[i-1])) {
             hex[0] = serial_in[i-1];
             hex[1] = serial_in[i];
-            addr[i/2] = hex_to_int(hex);
+            // addr[i/2] = hex_to_int(hex);
         } 
         else {
             return false;

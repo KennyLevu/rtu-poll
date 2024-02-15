@@ -10,7 +10,7 @@ SDCC_FLAGS = --model-small --stack-auto
 
 
 # STCGAL settings
-STCGAL_PORT = COM8
+STCGAL_PORT = COM6
 STCGAL_PARAMS = -P stc89 -o cpu_6t_enabled=true
 
 # Source files and target
