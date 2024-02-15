@@ -13,7 +13,7 @@
 char rtu[2] = "0";
 uint8_t serial_in[22] = {'\0'};
 uint8_t serial_pt = 0;
-uint8_t addr[6] = {0};
+uint8_t addr[8] = {0};
 uint8_t server_state = UDP;
 static const char com_rtu[5] = "RTU=";
 static const char com_ip[4] = "IP=";
@@ -21,6 +21,8 @@ static const char com_sub[5] = "SUB=";
 static const char com_gate[6] = "GATE=";
 static const char com_mac[5] = "MAC=";
 static const char com_mode[6] = "MODE=";
+uint8_t *peer_data = NULL;
+
 
 void setup(void)
 {
@@ -250,7 +252,7 @@ void udp_open(void)
     }
 }
 
-void udp_tx(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint8_t ip4, uint16_t port, uint16_t data_size, uint8_t *data)
+void udp_tx(uint16_t data_size, uint8_t *data)
 {
 
     uint16_t tx_free = 0x0000, txwr = 0x0000; 
@@ -263,12 +265,18 @@ void udp_tx(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint8_t ip4, uint16_t port, u
 
 
     /* Set destination ip,port */
-    wiz_write(SOCKET0_DIP1, ip1);
-    wiz_write(SOCKET0_DIP2, ip2);
-    wiz_write(SOCKET0_DIP3, ip3);
-    wiz_write(SOCKET0_DIP4, ip4);
-    wiz_write(SOCKET0_DPORU, (port >> 8) & 0xff);
-    wiz_write(SOCKET0_DPORL, port & 0xff);
+    // wiz_write(SOCKET0_DIP1, ip1);
+    // wiz_write(SOCKET0_DIP2, ip2);
+    // wiz_write(SOCKET0_DIP3, ip3);
+    // wiz_write(SOCKET0_DIP4, ip4);
+    wiz_write(SOCKET0_DIP1, addr[0]);
+    wiz_write(SOCKET0_DIP2, addr[1]);
+    wiz_write(SOCKET0_DIP3, addr[2]);
+    wiz_write(SOCKET0_DIP4, addr[3]);
+    // wiz_write(SOCKET0_DPORU, (port >> 8) & 0xff);
+    // wiz_write(SOCKET0_DPORL, port & 0xff);
+    wiz_write(SOCKET0_DPORU, addr[4]);
+    wiz_write(SOCKET0_DPORL, addr[5]);
 
     /* Calculate offset from write pointer*/
     txwr = txwr | (wiz_read(SOCKET0_TXWRU) << 8);
@@ -316,9 +324,9 @@ void udp_rx_helper(void)
     uint8_t rxsizu, rxsizl; // stores upper and lower half of rx register size
     uint16_t peer_port = 0x0000, data_size = 0x0000, rxrd = 0x0000;
     uint16_t rx_size = 0x0000;
-    uint8_t peer_header[8] = {0};
+    // uint8_t peer_header[8] = {0};
     // uint8_t peer_ip[4] = {0};
-    uint8_t *peer_data = NULL;
+    // uint8_t *peer_data = NULL;
 
     /* Get rx register size by combinning upper and lower half size values */
     rxsizu = wiz_read(SOCKET0_RXSIZU);
@@ -352,15 +360,19 @@ void udp_rx_helper(void)
     if ( (rx_offset + UDP_HEADER_SIZE) > (RXTX_MASK + 1) ) {
         serial_txstring("Overflow");
         upper_size = (RXTX_MASK + 1) - rx_offset; // get difference between end of buffer and offset
-        wiz_read_buf(rx_start_addr, upper_size, peer_header); 
-        left_size = UDP_HEADER_SIZE - upper_size; // get the remaining amount of data 
-        wiz_read_buf(SOCKET0_RX_BASE, left_size, peer_header + (upper_size - 1)); // read from overflow point base of rx
+        // wiz_read_buf(rx_start_addr, upper_size, peer_header);
+        wiz_read_buf(rx_start_addr, upper_size, addr); 
+
+        left_size = UDP_HEADER_SIZE - upper_size; //
+        // wiz_read_buf(SOCKET0_RX_BASE, left_size, peer_header + (upper_size - 1)); // read from overflow point base of rx 
+        wiz_read_buf(SOCKET0_RX_BASE, left_size, addr + (upper_size - 1)); // read from overflow point base of rx
         // update offset past header
         rx_offset = left_size;
     }
     else {
         // copy header size bytes of start addresss to header addr (copy the header)
-        wiz_read_buf(rx_start_addr, UDP_HEADER_SIZE, peer_header);
+        // wiz_read_buf(rx_start_addr, UDP_HEADER_SIZE, peer_header);
+        wiz_read_buf(rx_start_addr, UDP_HEADER_SIZE, addr);
         // update offset past header
         rx_offset += UDP_HEADER_SIZE;
     }
@@ -369,10 +381,14 @@ void udp_rx_helper(void)
 
     /* get remote peer information and receive data size from header*/
     // get port and size numbers by stitching upper and lower bytes
-    peer_port = peer_port | (peer_header[4] << 8);
-    peer_port = peer_port | peer_header[5];
-    data_size = data_size | (peer_header[6] << 8);
-    data_size = data_size | peer_header[7];
+    // peer_port = peer_port | (peer_header[4] << 8);
+    // peer_port = peer_port | peer_header[5];
+    // data_size = data_size | (peer_header[6] << 8);
+    // data_size = data_size | peer_header[7];
+    peer_port = peer_port | (addr[4] << 8);
+    peer_port = peer_port | addr[5];
+    data_size = data_size | (addr[6] << 8);
+    data_size = data_size | addr[7];
 
 
     // serial_txstring("Sender IP: ");
@@ -420,12 +436,14 @@ void udp_rx_helper(void)
                 // serial_txchar(peer_data[i]);
             }
         }
-        udp_tx(peer_header[0], peer_header[1], peer_header[2], peer_header[3], peer_port, data_size, peer_data);
+        // udp_tx(peer_header[0], peer_header[1], peer_header[2], peer_header[3], peer_port, data_size, peer_data);
+        udp_tx(data_size, peer_data);
+
     }
-    else {
-        // serial_txstring("Wrong RTU");
-        udp_tx(peer_header[0], peer_header[1], peer_header[2], peer_header[3], peer_port, 29, "Incorrect format or wrong RTU\0");
-    }
+    // else {
+    //     // serial_txstring("Wrong RTU");
+    //     udp_tx(peer_header[0], peer_header[1], peer_header[2], peer_header[3], peer_port, 29, "Incorrect format or wrong RTU\0");
+    // }
     
     // serial_txchar('\n');
     // serial_ln();
@@ -451,7 +469,15 @@ void udp_rx(void)
     }
 }
 
-void tcp_tx(void) {
+void tcp_close_state(void) {
+    // check for FIN
+    if ((SOCKET1_IR & 0x02) || (SOCKET1_IR & 0x08)) { // discon interrupt bit or timeout inerrupt bit
+         wiz_write(SOCKET1_COM, CLOSED);
+    }
+
+
+}
+void tcp_tx(uint16_t data_size) {
     uint16_t tx_free = 0x0000, txwr = 0x0000; 
     uint16_t tx_offset, tx_start_addr, upper_size, left_size;
 
@@ -475,21 +501,22 @@ void tcp_tx(void) {
     serial_txstring("\t overflow \r\n\0");
         // copy upper_size bytes to start addr
         upper_size = (RXTX_MASK + 1) - tx_offset;
-        wiz_write_buf(tx_start_addr, upper_size, data);
+        wiz_write_buf(tx_start_addr, upper_size, peer_data);
         left_size = (data_size - upper_size);
-        wiz_write_buf(SOCKET0_TX_BASE, left_size, data + upper_size);
+        wiz_write_buf(SOCKET0_TX_BASE, left_size, peer_data + upper_size);
     }
     else {
-        wiz_write_buf(tx_start_addr, data_size, data);
+        wiz_write_buf(tx_start_addr, data_size, peer_data);
     }
 
 
     // update write pointer addr
     txwr += data_size;
-    wiz_write(SOCKET0_TXWRU, (txwr >> 8) & 0xff);
-    wiz_write(SOCKET0_TXWRL, txwr & 0xff);
-    wiz_write(SOCKET0_COM, SEND);
-    if (wiz_read(SOCKET0_COM == 0x00)) {
+    wiz_write(SOCKET1_TXWRU, (txwr >> 8) & 0xff);
+    wiz_write(SOCKET1_TXWRL, txwr & 0xff);
+    wiz_write(SOCKET1_COM, SEND);
+
+    if (wiz_read(SOCKET1_COM == 0x00)) {
         serial_txstring("Send complete\r\n\0");
     } else if (wiz_read(SOCKET0_IR) & 0x08) {
         // check timeout bit
@@ -501,7 +528,7 @@ void tcp_rx_helper(void) {
     uint8_t rxsizu, rxsizl; // stores upper and lower half of rx register size
     uint16_t rxrd = 0x0000;
     uint16_t rx_size = 0x0000;
-    uint8_t *peer_data = NULL;
+    // uint8_t *peer_data = NULL;
 
     /* Get rx register size by combinning upper and lower half size values */
     rxsizu = wiz_read(SOCKET1_RXSIZU);
@@ -542,6 +569,26 @@ void tcp_rx_helper(void) {
     wiz_write(SOCKET1_COM, RECV);
     // Clear s1_ir register by writing 1s
     wiz_write(SOCKET1_IR, 0xff);
+
+    if (peer_data[0] == rtu[0]) {
+        for (int i = 0; i < rx_size; i++) { // Convert to uppercase
+            if (peer_data[i] >= 'a' && peer_data[i] <= 'z' ) {
+                peer_data[i] = peer_data[i] - 32;
+                // serial_txchar(peer_data[i]);
+            }
+            // else {
+            //     // serial_txchar(peer_data[i]);
+            // }
+        }
+        tcp_tx(rx_size);
+    }
+    // else {
+    //     free(peer_data);
+    //     peer_data = malloc(sizeof(uint8_t) * 30);
+    //     peer_data = "Incorrect format or wrong RTU\0";
+    //     tcp_tx(30);
+
+    // }
     free(peer_data);
 }
 void tcp_rx(void) {
