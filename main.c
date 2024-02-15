@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <sdcc-lib.h>
 #include <ctype.h>
 #include "periph.h"
 #include "constant.h"
@@ -21,6 +22,13 @@ static const char com_gate[6] = "GATE=";
 static const char com_mac[5] = "MAC=";
 static const char com_mode[6] = "MODE=";
 
+// write to 4 address registers
+void wiz_set_addr(uint16_t address, uint8_t len) {
+    for (int i = 0; i < len; i ++) {
+        wiz_write(address + i, addr[i]);
+    }
+}
+
 bool better_strncmp(char* check, uint8_t len) 
 {
     for (uint8_t i = 0; i < len; i++) {
@@ -37,11 +45,27 @@ bool hex_parse(void) {
     }
     // loop over buffer for max address length after MAC=
     char hex[3] = {'\0'};
+    uint8_t num = 0;
     for (uint8_t i = 5; i < 16; i+=2) {
         if (isalnum(serial_in[i]) && isalnum(serial_in[i-1])) {
+            // Cocatenate byte in ascii
             hex[0] = serial_in[i-1];
             hex[1] = serial_in[i];
-            // addr[i/2] = hex_to_int(hex);
+            for (int i = 0; i < 2; i++) {
+                num *= 16;
+                if (hex[i] >= '0' && hex[i] <= '9') {
+                    num += hex[i] - '0';
+                }
+                else if (hex[i] >= 'A' && hex[i] <= 'F') {
+                    num += hex[i] - 'A' + 10;
+                }
+                else {
+                    return false;
+                }
+            }
+            addr[(i-4)/2] = num;
+            // Undo offset and compute index order
+            // addr[(i-4)/2] = strtol(hex, NULL, 16);
         } 
         else {
             return false;
@@ -92,27 +116,6 @@ bool addr_parse(uint8_t off) {
     return true;
 }
 
-void serial_txreg(uint16_t addr)
-{
-    // serial_txnum(wiz_read(addr));
-    serial_txstring(itoa(wiz_read(addr)));
-    serial_txchar('\n');
-    // serial_ln();
-}
-
-void serial_tx2reg(uint16_t upper, uint16_t lower)
-{
-    uint16_t combined = 0x0000; 
-    uint8_t up = wiz_read(upper);
-    uint8_t lo = wiz_read(lower);
-    combined = combined | lo;
-    combined = combined | (up << 8);
-    // serial_txnum(combined);
-    serial_txstring(itoa(combined));
-    serial_txchar('\n');
-    // serial_ln();
-}
-
 // Initialize network
 void wiz_init(void) 
 {   
@@ -124,33 +127,55 @@ void wiz_init(void)
 
     /* Config Initial Source Network Settings */
     // wiz_set_gateway(126,10,220,254);   // 126.10.220.254 <---gateway address // 7e.a.dc.fe
-    wiz_write(GATEWAY_1, 126);
-    wiz_write(GATEWAY_2, 10);
-    wiz_write(GATEWAY_3, 220);
-    wiz_write(GATEWAY_4, 254);
+    // wiz_write(GATEWAY_1, 126);
+    // wiz_write(GATEWAY_2, 10);
+    // wiz_write(GATEWAY_3, 220);
+    // wiz_write(GATEWAY_4, 254);
+
+    addr[0] = 126;
+    addr[1] = 10;
+    addr[2] = 200;
+    addr[3] = 254;
+    wiz_set_addr(GATEWAY_1, 4);
 
     // wiz_set_subnet(255,255,192,0);    // 255.255.192.0 <--- subnet mask // ff.ff.c0.0
-    wiz_write(SUBNET_1, 255);
-    wiz_write(SUBNET_2, 255);
-    wiz_write(SUBNET_3, 192);
-    wiz_write(SUBNET_4, 0);
+    // wiz_write(SUBNET_1, 255);
+    // wiz_write(SUBNET_2, 255);
+    // wiz_write(SUBNET_3, 192);
+    // wiz_write(SUBNET_4, 0);
+    addr[0] = 255;
+    addr[1] = 255;
+    addr[2] = 192;
+    addr[3] = 0;
+    wiz_set_addr(SUBNET_1, 4);
 
     // wiz_set_mac(0x00, 0x08, 0xdc, 0x24, 0x4b, 0x5e); // mac address read as hex
-    wiz_write(MAC_1, 0x00);
-    wiz_write(MAC_2, 0x08);
-    wiz_write(MAC_3, 0xdc);
-    wiz_write(MAC_4, 0x24);
-    wiz_write(MAC_5, 0x4b);
-    wiz_write(MAC_6, 0x5e);
+    // wiz_write(MAC_1, 0x00);
+    // wiz_write(MAC_2, 0x08);
+    // wiz_write(MAC_3, 0xdc);
+    // wiz_write(MAC_4, 0x24);
+    // wiz_write(MAC_5, 0x4b);
+    // wiz_write(MAC_6, 0x5e);
+    
+    addr[0] = 0x00;
+    addr[1] = 0x08;
+    addr[2] = 0xdc;
+    addr[3] = 0x24;
+    addr[4] = 0x4b;
+    addr[5] = 0x5e;
+    wiz_set_addr(MAC_1, 6);
     
     // wiz_set_ip(126,10,210,10);     // 126.10.218.163 <--- my pc // 126.10.200.0 7e.a.c8.0<--- set mcu
-    wiz_write(IP_1, 126);
-    wiz_write(IP_2, 10);
-    wiz_write(IP_3, 210);
-    wiz_write(IP_4, 10);
+    // wiz_write(IP_1, 126);
+    // wiz_write(IP_2, 10);
+    // wiz_write(IP_3, 210);
+    // wiz_write(IP_4, 10);
 
-
-
+    addr[0] = 126;
+    addr[1] = 10;
+    addr[2] = 210;
+    addr[3] = 10;
+    wiz_set_addr(IP_1, 4);
 
     /* Init Sockets 0/1
        Socket 0: UDP 5000 | 4KB RX/TX | No Multicast
@@ -192,7 +217,7 @@ void udp_open(void)
         if (wiz_read(SOCKET0_STAT) != SOCK_UDP) {
             wiz_write(SOCKET0_COM, CLOSED); // socket not initialized, retry
         } else {
-            serial_txstring("UDP Socket 0 port 5000 open\r\n\0");
+            // serial_txstring("UDP Socket 0 port 5000 open\r\n\0");
             break;
         }
     }
@@ -325,23 +350,20 @@ void udp_rx_helper(void)
     data_size = data_size | peer_header[7];
 
 
-    serial_txstring("Sender IP: ");
-    for (int i = 0; i < 4; i++) {
-        // serial_txnum(peer_header[i]);
-        serial_txstring(itoa(peer_header[i]));
+    // serial_txstring("Sender IP: ");
+    // for (int i = 0; i < 4; i++) {
+    //     // serial_txnum(peer_header[i]);
+    //     serial_txstring(itoa(peer_header[i]));
 
-        if (i < 3) {
-            serial_txchar('.');
-        }
-    }
-    serial_txstring("\tSender Port: ");
-    // serial_txnum(peer_port);
-    serial_txstring(itoa(peer_port));
-    serial_txstring("\tRX Size: ");
-    // serial_txnum(rx_size);
-    serial_txstring(itoa(rx_size));
-    serial_txchar('\n');
-    // serial_ln();
+    //     if (i < 3) {
+    //         serial_txchar('.');
+    //     }
+    // }
+    // serial_txstring("\tSender Port: ");
+    // serial_txstring(itoa(peer_port));
+    // serial_txstring("\tRX Size: ");
+    // serial_txstring(itoa(rx_size));
+    // serial_txchar('\n');
 
     // Allocate buffer for data size
     peer_data = malloc(sizeof(uint8_t) * data_size);
@@ -360,23 +382,23 @@ void udp_rx_helper(void)
     else {
         wiz_read_buf(rx_start_addr, data_size, peer_data);
     }
-    serial_txstring("\rRESPONSE: ");
-    serial_txstring("Peer data: ");
+    // serial_txstring("\rRESPONSE: ");
+    // serial_txstring("Peer data: ");
     // serial_txchar(peer_data[0]);
     if (peer_data[0] == rtu[0]) {
         for (int i = 0; i < data_size; i++) { // Convert to uppercase
             if (peer_data[i] >= 'a' && peer_data[i] <= 'z' ) {
                 peer_data[i] = peer_data[i] - 32;
-                serial_txchar(peer_data[i]);
+                // serial_txchar(peer_data[i]);
             }
             else {
-                serial_txchar(peer_data[i]);
+                // serial_txchar(peer_data[i]);
             }
         }
         udp_tx(peer_header[0], peer_header[1], peer_header[2], peer_header[3], peer_port, data_size, peer_data);
     }
     else {
-        serial_txstring("Wrong RTU");
+        // serial_txstring("Wrong RTU");
         udp_tx(peer_header[0], peer_header[1], peer_header[2], peer_header[3], peer_port, 29, "Incorrect format or wrong RTU\0");
     }
     
@@ -419,12 +441,79 @@ void setup(void)
 void print_config(void) {
     serial_txstring("\n\rWizNet Adapter:\r\n\n");
 
-    serial_txstring("   Mode . . . .  . . : ");
+    // serial_txstring("   Mode . . . .  . . : ");
+    // serial_txstring(is_udp ? "UDP" : "TCP");
+    // serial_txstring("\r\n");
+
+    // serial_txstring("   IPv4 Address  . . : ");
+    // // serial_txnum(wiz_read(IP_1));
+    // serial_txstring(itoa(wiz_read(IP_1)));
+    // serial_txchar('.');
+    // // serial_txnum(wiz_read(IP_2));
+    // serial_txstring(itoa(wiz_read(IP_2)));
+    // serial_txchar('.');
+    // // serial_txnum(wiz_read(IP_3));
+    // serial_txstring(itoa(wiz_read(IP_3)));
+    // serial_txchar('.');
+    // // serial_txnum(wiz_read(IP_4));
+    // serial_txstring(itoa(wiz_read(IP_4)));
+    // serial_txstring("\r\n");
+
+    // serial_txstring("   RTU Address . . . : ");
+    // // serial_txnum(rtu);
+    // serial_txstring(rtu);
+    // serial_txstring("\r\n");
+
+    // serial_txstring("   Subnet Mask . . . : ");
+    // // serial_txnum(wiz_read(SUBNET_1));
+    // serial_txstring(itoa(wiz_read(SUBNET_1)));
+    // serial_txchar('.');
+    // // serial_txnum(wiz_read(SUBNET_2));
+    // serial_txstring(itoa(wiz_read(SUBNET_2)));
+    // serial_txchar('.');
+    // // serial_txnum(wiz_read(SUBNET_3));
+    // serial_txstring(itoa(wiz_read(SUBNET_3)));
+    // serial_txchar('.');
+    // // serial_txnum(wiz_read(SUBNET_4));
+    // serial_txstring(itoa(wiz_read(SUBNET_4)));
+    // serial_txstring("\r\n");
+
+    // serial_txstring("   Gateway Address . : ");
+    // // serial_txnum(wiz_read(GATEWAY_1));
+    // serial_txstring(itoa(wiz_read(GATEWAY_1)));
+    // serial_txchar('.');
+    // // serial_txnum(wiz_read(GATEWAY_2));
+    // serial_txstring(itoa(wiz_read(GATEWAY_2)));
+    // serial_txchar('.');
+    // // serial_txnum(wiz_read(GATEWAY_3));
+    // serial_txstring(itoa(wiz_read(GATEWAY_3)));
+    // serial_txchar('.');
+    // // serial_txnum(wiz_read(GATEWAY_4));
+    // serial_txstring(itoa(wiz_read(GATEWAY_4)));
+    // serial_txstring("\r\n");
+
+    // serial_txstring("   MAC Address . . . : ");
+    // serial_txhex(wiz_read(MAC_1));
+    // // serial_txchar(':');
+    // serial_txhex(wiz_read(MAC_2));
+    // // serial_txchar(':');
+    // serial_txhex(wiz_read(MAC_3));
+    // // serial_txchar(':');
+    // serial_txhex(wiz_read(MAC_4));
+    // // serial_txchar(':');
+    // serial_txhex(wiz_read(MAC_5));
+    // // serial_txchar(':');
+    // serial_txhex(wiz_read(MAC_6));
+    // serial_txstring("\n\r\n");
+
+    serial_txstring("Set MODE> MODE=");
     serial_txstring(is_udp ? "UDP" : "TCP");
     serial_txstring("\r\n");
 
-    serial_txstring("   IPv4 Address  . . : ");
-    // serial_txnum(wiz_read(IP_1));
+    serial_txstring("Set RTU (0-9)> RTU=");
+    serial_txstring(rtu);
+
+    serial_txstring("\r\nSet IP> IP=");
     serial_txstring(itoa(wiz_read(IP_1)));
     serial_txchar('.');
     // serial_txnum(wiz_read(IP_2));
@@ -435,15 +524,8 @@ void print_config(void) {
     serial_txchar('.');
     // serial_txnum(wiz_read(IP_4));
     serial_txstring(itoa(wiz_read(IP_4)));
-    serial_txstring("\r\n");
 
-    serial_txstring("   RTU Address . . . : ");
-    // serial_txnum(rtu);
-    serial_txstring(rtu);
-    serial_txstring("\r\n");
-
-    serial_txstring("   Subnet Mask . . . : ");
-    // serial_txnum(wiz_read(SUBNET_1));
+    serial_txstring("\r\nSet SUBNET> SUB=");
     serial_txstring(itoa(wiz_read(SUBNET_1)));
     serial_txchar('.');
     // serial_txnum(wiz_read(SUBNET_2));
@@ -454,11 +536,9 @@ void print_config(void) {
     serial_txchar('.');
     // serial_txnum(wiz_read(SUBNET_4));
     serial_txstring(itoa(wiz_read(SUBNET_4)));
-    serial_txstring("\r\n");
 
-    serial_txstring("   Gateway Address . : ");
-    // serial_txnum(wiz_read(GATEWAY_1));
-    serial_txstring(itoa(wiz_read(GATEWAY_1)));
+    serial_txstring("\r\nSet GATE> GATE=");
+     serial_txstring(itoa(wiz_read(GATEWAY_1)));
     serial_txchar('.');
     // serial_txnum(wiz_read(GATEWAY_2));
     serial_txstring(itoa(wiz_read(GATEWAY_2)));
@@ -468,27 +548,15 @@ void print_config(void) {
     serial_txchar('.');
     // serial_txnum(wiz_read(GATEWAY_4));
     serial_txstring(itoa(wiz_read(GATEWAY_4)));
-    serial_txstring("\r\n");
 
-    serial_txstring("   MAC Address . . . : ");
+    serial_txstring("\r\nSet MAC> MAC=");
     serial_txhex(wiz_read(MAC_1));
-    serial_txchar(':');
     serial_txhex(wiz_read(MAC_2));
-    serial_txchar(':');
     serial_txhex(wiz_read(MAC_3));
-    serial_txchar(':');
     serial_txhex(wiz_read(MAC_4));
-    serial_txchar(':');
     serial_txhex(wiz_read(MAC_5));
-    serial_txchar(':');
     serial_txhex(wiz_read(MAC_6));
     serial_txstring("\n\r\n");
-
-    serial_txstring("Set RTU (0-9): USING RTU=\r\n");
-    serial_txstring("Set IP: USING IP=\r\n");
-    serial_txstring("Set SUBNET: USING SUB=\r\n");
-    serial_txstring("Set GATE: USING GATE=\r\n");
-    serial_txstring("Set MAC: USING MAC=\r\n\n");
 
 }
 
@@ -501,14 +569,10 @@ void main(void)
     udp_open(); // open udp socket
     uint8_t read;
 	while (1) {
-        // print_config();
-        // continue;
+
         udp_rx();
         read = RX_data(); // get character from terminal
-        // if (read != 0) {
-        //     serial_txnum(read);
-        // }
-
+ 
         /* Take input from valid keys and store in buffer*/
         if (((read >= '0' && read <= '9') 
             || (read >= 'a' && read <= 'z') 
@@ -540,10 +604,11 @@ void main(void)
                 print_config();
             } else {
                 if (better_strncmp("IP=", 3) && addr_parse(3) ) {
-                    wiz_write(IP_1, addr[0]);
-                    wiz_write(IP_2, addr[1]);
-                    wiz_write(IP_3, addr[2]);
-                    wiz_write(IP_4, addr[3]);
+                    // wiz_write(IP_1, addr[0]);
+                    // wiz_write(IP_2, addr[1]);
+                    // wiz_write(IP_3, addr[2]);
+                    // wiz_write(IP_4, addr[3]);
+                    wiz_set_addr(IP_1, 4);
                     // wiz_write(MODE, 0X80); // perform s/w reset
                 } 
                 else if(better_strncmp("RTU=", 4) && serial_pt == 5) {
@@ -552,19 +617,28 @@ void main(void)
                     }
                 }
                 else if(better_strncmp("SUB=", 4) && addr_parse(4)) {
-                    wiz_write(SUBNET_1, addr[0]);
-                    wiz_write(SUBNET_2, addr[1]);
-                    wiz_write(SUBNET_3, addr[2]);
-                    wiz_write(SUBNET_4, addr[3]);
+                    // wiz_write(SUBNET_1, addr[0]);
+                    // wiz_write(SUBNET_2, addr[1]);
+                    // wiz_write(SUBNET_3, addr[2]);
+                    // wiz_write(SUBNET_4, addr[3]);
+                    wiz_set_addr(SUBNET_1, 4);
                     // wiz_write(MODE, 0X80); // perform s/w reset
                 }
                 else if(better_strncmp("MAC=", 4) && hex_parse()) {
+                    // wiz_write(MAC_1, addr[0]);
+                    // wiz_write(MAC_2, addr[1]);
+                    // wiz_write(MAC_3, addr[2]);
+                    // wiz_write(MAC_4, addr[3]);
+                    // wiz_write(MAC_5, addr[4]);
+                    // wiz_write(MAC_6, addr[5]);
+                    wiz_set_addr(MAC_1, 6);
                 }
                 else if(better_strncmp("GATE=", 5) && addr_parse(5)) {
-                    wiz_write(GATEWAY_1, addr[0]);
-                    wiz_write(GATEWAY_2, addr[1]);
-                    wiz_write(GATEWAY_3, addr[2]);
-                    wiz_write(GATEWAY_4, addr[3]);
+                    // wiz_write(GATEWAY_1, addr[0]);
+                    // wiz_write(GATEWAY_2, addr[1]);
+                    // wiz_write(GATEWAY_3, addr[2]);
+                    // wiz_write(GATEWAY_4, addr[3]);
+                    wiz_set_addr(GATEWAY_1, 4);
                     // wiz_write(MODE, 0X80); // perform s/w reset
 
                 }

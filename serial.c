@@ -2,7 +2,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include "periph.h"
 #include "constant.h"
 
@@ -11,6 +10,7 @@ void delay_us(unsigned int us_count)
  {  
     while(us_count!=0)
       {
+         us_count--;
          us_count--;
        }
 }

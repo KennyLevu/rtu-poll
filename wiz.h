@@ -3,8 +3,8 @@
 #include <stdint.h>
 // void serial_txreg(uint16_t addr);
 // void serial_tx2reg(uint16_t upper, uint16_t lower);
-void cmdout_16(uint16_t command);
-void cmdout_8(uint8_t command);
+// void cmdout_16(uint16_t command);
+// void cmdout_8(uint8_t command);
 void wiz_write(uint16_t addr, uint8_t data);
 uint8_t wiz_read(uint16_t addr);
 // void wiz_set_gateway(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
