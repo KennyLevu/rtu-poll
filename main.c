@@ -14,7 +14,7 @@ char rtu[2] = "0";
 uint8_t serial_in[22] = {'\0'};
 uint8_t serial_pt = 0;
 uint8_t addr[6] = {0};
-bool is_udp = true;
+uint8_t server_state = UDP;
 static const char com_rtu[5] = "RTU=";
 static const char com_ip[4] = "IP=";
 static const char com_sub[5] = "SUB=";
@@ -410,7 +410,7 @@ void print_config(void) {
     serial_txstring("\n\rWizNet Adapter:\r\n\n");
 
     serial_txstring("Set MODE> . . . . MODE=");
-    serial_txstring(is_udp ? "UDP" : "TCP");
+    serial_txstring(server_state ? ((server_state == TCP) ? "TCP" : "BOTH") : "UDP");
     serial_txstring("\r\n");
 
     serial_txstring("Set RTU (0-9)>  . RTU=");
@@ -455,18 +455,25 @@ void print_config(void) {
 }
 
 void tcp_rx(void) {
-
+    
 }
 
+/* Initialize TCP Socket in Server Mode*/
 void tcp_open(void) 
 {
-    /* Initialize TCP Socket*/
     while (1) {
         wiz_write(SOCKET1_COM, OPEN); // open socket
         if (wiz_read(SOCKET1_STAT) != SOCK_INIT) {
             wiz_write(SOCKET1_COM, CLOSED); // socket not initialized, retry
         } else {
             serial_txstring("UDP Socket 1 port 6000 open\r\n\0");
+        }
+
+        wiz_write(SOCKET1_COM, LISTEN); // SET SOCKET TO SERVER MODE LISTEN
+        if (wiz_read(SOCKET1_STAT) != SOCK_LISTEN) {
+            wiz_write (SOCKET1_COM, CLOSED);
+        }
+        else {
             break;
         }
     }
@@ -540,19 +547,25 @@ void main(void)
                     // wiz_write(MODE, 0X80); // perform s/w reset
 
                 }
-                else if (better_strncmp("MODE=", 5) && serial_pt == 8 && 
+                else if (better_strncmp("MODE=", 5) && (serial_pt == 8 && 
                 ((serial_in[5] == 'T' && serial_in[6] == 'C' && serial_in[7] == 'P') ||
-                (serial_in[5] == 'U' && serial_in[6] == 'D' && serial_in[7] == 'P'))) 
+                (serial_in[5] == 'U' && serial_in[6] == 'D' && serial_in[7] == 'P'))) ||
+                (serial_pt == 9 && (serial_in[5] == 'B' && serial_in[6] == 'O' && serial_in[7] == 'T' && serial_in[8] == 'H'))) 
                 {
-                    // close active socket and open corresponding socket
-                    if (serial_in[5] == 'T' && is_udp == true) {
-                        is_udp = false;
+                    // close active sockets and open corresponding sockets
+                    if (serial_in[5] == 'B') {
+                        // set both >> TODO: CHECK IF OPENING AN ALREADY OPEN SOCKET CAUSES PRBLEMS
+                        server_state = BOTH;
+                        udp_open();
+                        tcp_open();
+                    } 
+                    else if (serial_in[5] == 'T' && server_state != TCP) {
+                        server_state = TCP;
                         wiz_write(SOCKET0_COM, CLOSED);
                         tcp_open();
-
                     }
-                    else if (is_udp == false) {
-                        is_udp = true;
+                    else  {
+                        server_state = UDP;
                         wiz_write(SOCKET1_COM, CLOSED)
                         udp_open();
                     }

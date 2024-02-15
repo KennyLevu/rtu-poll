@@ -11,6 +11,7 @@
 #define SPACE 32 // space
 #define UDP 0
 #define TCP 1
+#define BOTH 2
 // IR Interrupt Register (read only)
 #define INTER_REG 0x0015
 #define SOCK0_MSK 0x01 // interrupt mask
