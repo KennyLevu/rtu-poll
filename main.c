@@ -185,7 +185,7 @@ void udp_open(void)
         if (wiz_read(SOCKET0_STAT) != SOCK_UDP) {
             wiz_write(SOCKET0_COM, CLOSED); // socket not initialized, retry
         } else {
-            // serial_txstring("UDP Socket 0 port 5000 open\r\n\0");
+            serial_txstring("UDP Socket 0 port 5000 open\r\n\0");
             break;
         }
     }
@@ -466,7 +466,7 @@ void tcp_open(void)
         if (wiz_read(SOCKET1_STAT) != SOCK_INIT) {
             wiz_write(SOCKET1_COM, CLOSED); // socket not initialized, retry
         } else {
-            serial_txstring("UDP Socket 1 port 6000 open\r\n\0");
+            serial_txstring("TCP Socket 1 port 6000 open\r\n\0");
         }
 
         wiz_write(SOCKET1_COM, LISTEN); // SET SOCKET TO SERVER MODE LISTEN
@@ -488,10 +488,10 @@ void main(void)
     udp_open(); // open udp socket
     uint8_t read;
 	while (1) {
-        if (is_udp) {
+        if (server_state == UDP) {
             udp_rx();
         }
-        else {
+        else if (server_state == TCP) {
             tcp_rx();
         }
         read = RX_data(); // get character from terminal
@@ -566,7 +566,7 @@ void main(void)
                     }
                     else  {
                         server_state = UDP;
-                        wiz_write(SOCKET1_COM, CLOSED)
+                        wiz_write(SOCKET1_COM, CLOSED);
                         udp_open();
                     }
                 } 
