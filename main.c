@@ -12,7 +12,7 @@
 char rtu[2] = "0";
 uint8_t serial_in[22] = {'\0'};
 uint8_t serial_pt = 0;
-uint8_t addr[4] = {0};
+uint8_t addr[6] = {0};
 bool is_udp = true;
 static const char com_rtu[5] = "RTU=";
 static const char com_ip[4] = "IP=";
@@ -31,6 +31,26 @@ bool better_strncmp(char* check, uint8_t len)
     return true;
 } 
 
+bool hex_parse(void) {
+    if (serial_pt != 16) {
+        return false
+    }
+    // loop over buffer for max address length after MAC=
+    char hex[3] = {'\0'};
+    for (uint8_t i = 5; i < 16; i+=2) {
+        if (isalnum(serial_in[i]) && isalnum(serial_in[i-1])) {
+            hex[0] = serial_in[i-1];
+            hex[1] = serial_in[i];
+            addr[i/2] = hex_to_int(hex);
+        } 
+        else {
+            return false;
+        }
+    }
+       
+    return true;
+
+}
 // parse address syntax
 bool addr_parse(uint8_t off) {
     uint8_t dots = 0;
@@ -493,7 +513,7 @@ void main(void)
         if (((read >= '0' && read <= '9') 
             || (read >= 'a' && read <= 'z') 
                 || (read >= 'A' && read <= 'Z') 
-                    || (read == SPACE) || (read == '.') || (read == ':') || (read == '?') || (read == '=') )
+                    || (read == SPACE) || (read == '.') || (read == '?') || (read == '=') )
             && serial_pt < 21) {
             serial_in[serial_pt] = read;
             serial_pt++;
@@ -524,6 +544,7 @@ void main(void)
                     wiz_write(IP_2, addr[1]);
                     wiz_write(IP_3, addr[2]);
                     wiz_write(IP_4, addr[3]);
+                    // wiz_write(MODE, 0X80); // perform s/w reset
                 } 
                 else if(better_strncmp("RTU=", 4) && serial_pt == 5) {
                     if (serial_in[4] >= '0' && serial_in[4] <= '9') {
@@ -535,15 +556,17 @@ void main(void)
                     wiz_write(SUBNET_2, addr[1]);
                     wiz_write(SUBNET_3, addr[2]);
                     wiz_write(SUBNET_4, addr[3]);
+                    // wiz_write(MODE, 0X80); // perform s/w reset
                 }
-                else if(better_strncmp("MAC=", 4)) {
-                    serial_txchar('5');
+                else if(better_strncmp("MAC=", 4) && hex_parse()) {
                 }
                 else if(better_strncmp("GATE=", 5) && addr_parse(5)) {
                     wiz_write(GATEWAY_1, addr[0]);
                     wiz_write(GATEWAY_2, addr[1]);
                     wiz_write(GATEWAY_3, addr[2]);
                     wiz_write(GATEWAY_4, addr[3]);
+                    // wiz_write(MODE, 0X80); // perform s/w reset
+
                 }
                 else {
                     // invalid();
