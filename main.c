@@ -22,6 +22,65 @@ static const char com_gate[6] = "GATE=";
 static const char com_mac[5] = "MAC=";
 static const char com_mode[6] = "MODE=";
 
+void setup(void)
+{
+    SCON = 0x50;    // Serial Mode 1 8 bit UART with timer1 baud rate
+    TMOD = 0x20;    // timer 1 mode 2 8 bit auto reload | timer 0 mode 1 16 bit timer
+    TH1 = 0xfd;     // Load value for 9600 baud --> UART Mode 1 means baud is determined by timer 1's overflow rate 
+    REN = HIGH;        // serial port initialization
+    EA = HIGH;			// enable interrupts
+	ES = HIGH;			// enable serial port interrupts
+    TR1 = HIGH; // start timer
+    RI = LOW; // clear transmit interupt
+}
+
+void print_config(void) {
+    serial_txstring("\n\rWizNet Adapter:\r\n\n");
+
+    serial_txstring("Set MODE> . . . . MODE=");
+    serial_txstring(server_state ? ((server_state == TCP) ? "TCP" : "BOTH") : "UDP");
+    serial_txstring("\r\n");
+
+    serial_txstring("Set RTU (0-9)>  . RTU=");
+    serial_txstring(rtu);
+
+    serial_txstring("\r\nSet IP> . . . . . IP=");
+    serial_txstring(itoa(wiz_read(IP_1)));
+    serial_txchar('.');
+    serial_txstring(itoa(wiz_read(IP_2)));
+    serial_txchar('.');
+    serial_txstring(itoa(wiz_read(IP_3)));
+    serial_txchar('.');
+    serial_txstring(itoa(wiz_read(IP_4)));
+
+    serial_txstring("\r\nSet SUBNET> . . . SUB=");
+    serial_txstring(itoa(wiz_read(SUBNET_1)));
+    serial_txchar('.');
+    serial_txstring(itoa(wiz_read(SUBNET_2)));
+    serial_txchar('.');
+    serial_txstring(itoa(wiz_read(SUBNET_3)));
+    serial_txchar('.');
+    serial_txstring(itoa(wiz_read(SUBNET_4)));
+
+    serial_txstring("\r\nSet GATE> . . . . GATE=");
+     serial_txstring(itoa(wiz_read(GATEWAY_1)));
+    serial_txchar('.');
+    serial_txstring(itoa(wiz_read(GATEWAY_2)));
+    serial_txchar('.');
+    serial_txstring(itoa(wiz_read(GATEWAY_3)));
+    serial_txchar('.');
+    serial_txstring(itoa(wiz_read(GATEWAY_4)));
+
+    serial_txstring("\r\nSet MAC>  . . . . MAC=");
+    serial_txhex(wiz_read(MAC_1));
+    serial_txhex(wiz_read(MAC_2));
+    serial_txhex(wiz_read(MAC_3));
+    serial_txhex(wiz_read(MAC_4));
+    serial_txhex(wiz_read(MAC_5));
+    serial_txhex(wiz_read(MAC_6));
+    serial_txstring("\n\r\n");
+
+}
 // write to 4 address registers
 void wiz_set_addr(uint16_t address, uint8_t len) {
     for (int i = 0; i < len; i ++) {
@@ -394,68 +453,61 @@ void udp_rx(void)
     }
 }
 
-void setup(void)
-{
-    SCON = 0x50;    // Serial Mode 1 8 bit UART with timer1 baud rate
-    TMOD = 0x20;    // timer 1 mode 2 8 bit auto reload | timer 0 mode 1 16 bit timer
-    TH1 = 0xfd;     // Load value for 9600 baud --> UART Mode 1 means baud is determined by timer 1's overflow rate 
-    REN = HIGH;        // serial port initialization
-    EA = HIGH;			// enable interrupts
-	ES = HIGH;			// enable serial port interrupts
-    TR1 = HIGH; // start timer
-    RI = LOW; // clear transmit interupt
-}
-
-void print_config(void) {
-    serial_txstring("\n\rWizNet Adapter:\r\n\n");
-
-    serial_txstring("Set MODE> . . . . MODE=");
-    serial_txstring(server_state ? ((server_state == TCP) ? "TCP" : "BOTH") : "UDP");
-    serial_txstring("\r\n");
-
-    serial_txstring("Set RTU (0-9)>  . RTU=");
-    serial_txstring(rtu);
-
-    serial_txstring("\r\nSet IP> . . . . . IP=");
-    serial_txstring(itoa(wiz_read(IP_1)));
-    serial_txchar('.');
-    serial_txstring(itoa(wiz_read(IP_2)));
-    serial_txchar('.');
-    serial_txstring(itoa(wiz_read(IP_3)));
-    serial_txchar('.');
-    serial_txstring(itoa(wiz_read(IP_4)));
-
-    serial_txstring("\r\nSet SUBNET> . . . SUB=");
-    serial_txstring(itoa(wiz_read(SUBNET_1)));
-    serial_txchar('.');
-    serial_txstring(itoa(wiz_read(SUBNET_2)));
-    serial_txchar('.');
-    serial_txstring(itoa(wiz_read(SUBNET_3)));
-    serial_txchar('.');
-    serial_txstring(itoa(wiz_read(SUBNET_4)));
-
-    serial_txstring("\r\nSet GATE> . . . . GATE=");
-     serial_txstring(itoa(wiz_read(GATEWAY_1)));
-    serial_txchar('.');
-    serial_txstring(itoa(wiz_read(GATEWAY_2)));
-    serial_txchar('.');
-    serial_txstring(itoa(wiz_read(GATEWAY_3)));
-    serial_txchar('.');
-    serial_txstring(itoa(wiz_read(GATEWAY_4)));
-
-    serial_txstring("\r\nSet MAC>  . . . . MAC=");
-    serial_txhex(wiz_read(MAC_1));
-    serial_txhex(wiz_read(MAC_2));
-    serial_txhex(wiz_read(MAC_3));
-    serial_txhex(wiz_read(MAC_4));
-    serial_txhex(wiz_read(MAC_5));
-    serial_txhex(wiz_read(MAC_6));
-    serial_txstring("\n\r\n");
-
-}
-
-void tcp_rx(void) {
+void tcp_tx(void) {
     
+}
+void tcp_rx_helper(void) {
+    uint16_t rx_offset, rx_start_addr, upper_size, left_size; // upper size stores uper size of start address, left stores left size of base addr
+    uint8_t rxsizu, rxsizl; // stores upper and lower half of rx register size
+    uint16_t rxrd = 0x0000;
+    uint16_t rx_size = 0x0000;
+    uint8_t *peer_data = NULL;
+
+    /* Get rx register size by combinning upper and lower half size values */
+    rxsizu = wiz_read(SOCKET1_RXSIZU);
+    rxsizl = wiz_read(SOCKET1_RXSIZL);
+    rx_size = rx_size | rxsizl;
+    rx_size = rx_size | (rxsizu << 8);
+
+    /* Calculate offset */
+    rxrd = rxrd | (wiz_read(SOCKET1_RXRDU) << 8);
+    rxrd = rxrd | wiz_read(SOCKET1_RXRDL);
+    rx_offset = rxrd & RXTX_MASK;
+
+    /* Get start (physical) address*/
+    rx_start_addr = SOCKET1_RX_BASE + rx_offset;
+    // serial_txstring("\t start_addr: \0");
+    // serial_txnum(rx_start_addr);
+
+    peer_data = malloc(sizeof(uint8_t) * rx_size);
+    // Handle overflow socket memory
+    if ( (rx_offset + rx_size) > (RXTX_MASK + 1) ) {
+        serial_txstring("Overflow");
+        upper_size = (RXTX_MASK + 1) - rx_offset; // get difference between end of buffer and offset
+        wiz_read_buf(rx_start_addr, upper_size, peer_data); 
+        left_size = rx_size - upper_size; // get the remaining amount of data 
+        wiz_read_buf(SOCKET1_RX_BASE, left_size, peer_data + (upper_size - 1)); // read from overflow point base of rx
+    }
+    else {
+        // copy header size bytes of start addresss to header addr (copy the header)
+        wiz_read_buf(rx_start_addr, rx_size, peer_data);
+    }
+
+    /* increase Sn_RX_RD as length of received packet*/
+    rxrd += rx_size;
+    // store upper and lower halves
+    wiz_write(SOCKET1_RXRDU, (rxrd >> 8) & 0xff);
+    wiz_write(SOCKET1_RXRDL, rxrd&0xff);
+
+    wiz_write(SOCKET1_COM, RECV);
+    // Clear s1_ir register by writing 1s
+    wiz_write(SOCKET1_IR, 0xff);
+    free(peer_data);
+}
+void tcp_rx(void) {
+    if (wiz_read(SOCKET1_IR) & 0x04) {  // check for Recv interrupt (bit 2/100/x04)
+        tcp_rx_helper();
+    }
 }
 
 /* Initialize TCP Socket in Server Mode*/

@@ -40,11 +40,14 @@
 // TXRX Memory Base ADDR from datasheet
 #define SOCKET0_RX_BASE 0x6000 
 #define SOCKET0_TX_BASE 0x4000
-// #define SOCKET1_RX_BASE 0x6800 
-// #define SOCKET1_TX_BASE 0x4000
+
 /* RX Mask = Memory size (4KB - 1) == 0xFFFF - 1
  mask helps calculate offset by wrapping the offset value within the register size */
 #define RXTX_MASK 0x1000 - 1 
+
+// Socket 1 base addresses start on top of socket0 base address + memory size = (mask==(4kb -1) +1)
+#define SOCKET1_RX_BASE (SOCKET0_RX_BASE + RXTX_MASK + 1)
+#define SOCKET1_TX_BASE (SOCKET0_TX_BASE + RXTX_MASK + 1)
 
 #define SOCKET1 0x0500
 #define SOCKET1_COM 0x0501
