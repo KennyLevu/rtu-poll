@@ -299,7 +299,6 @@ void udp_tx(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint8_t ip4, uint16_t port, u
     txwr += data_size;
     wiz_write(SOCKET0_TXWRU, (txwr >> 8) & 0xff);
     wiz_write(SOCKET0_TXWRL, txwr & 0xff);
-    // while(1) {
     wiz_write(SOCKET0_COM, SEND);
     if (wiz_read(SOCKET0_COM == 0x00)) {
         serial_txstring("Send complete\r\n\0");
@@ -307,7 +306,6 @@ void udp_tx(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint8_t ip4, uint16_t port, u
         // check timeout bit
         serial_txstring("\r\nSend failed\r\n\0");
     }
-// }
 }   
 
 
@@ -454,7 +452,49 @@ void udp_rx(void)
 }
 
 void tcp_tx(void) {
+    uint16_t tx_free = 0x0000, txwr = 0x0000; 
+    uint16_t tx_offset, tx_start_addr, upper_size, left_size;
+
+    /* Get free TX Memory size */
+    tx_free = tx_free | (wiz_read(SOCKET1_TXFSU) << 8);
+    tx_free = tx_free | wiz_read(SOCKET1_TXFSL);
+
+    /* Calculate offset from write pointer*/
+    txwr = txwr | (wiz_read(SOCKET1_TXWRU) << 8);
+    txwr = txwr | wiz_read(SOCKET1_TXWRL);
+    tx_offset = txwr & RXTX_MASK;
     
+    /* Get start address*/
+    tx_start_addr = SOCKET1_TX_BASE + tx_offset;
+    // serial_txstring("\t start \0");
+    // serial_txnum(tx_start_addr);
+    // serial_ln();
+
+    /* Overflow write to base address if overflow memory */
+    if ( (tx_offset + data_size) > RXTX_MASK + 1) {
+    serial_txstring("\t overflow \r\n\0");
+        // copy upper_size bytes to start addr
+        upper_size = (RXTX_MASK + 1) - tx_offset;
+        wiz_write_buf(tx_start_addr, upper_size, data);
+        left_size = (data_size - upper_size);
+        wiz_write_buf(SOCKET0_TX_BASE, left_size, data + upper_size);
+    }
+    else {
+        wiz_write_buf(tx_start_addr, data_size, data);
+    }
+
+
+    // update write pointer addr
+    txwr += data_size;
+    wiz_write(SOCKET0_TXWRU, (txwr >> 8) & 0xff);
+    wiz_write(SOCKET0_TXWRL, txwr & 0xff);
+    wiz_write(SOCKET0_COM, SEND);
+    if (wiz_read(SOCKET0_COM == 0x00)) {
+        serial_txstring("Send complete\r\n\0");
+    } else if (wiz_read(SOCKET0_IR) & 0x08) {
+        // check timeout bit
+        serial_txstring("\r\nSend failed\r\n\0");
+    }
 }
 void tcp_rx_helper(void) {
     uint16_t rx_offset, rx_start_addr, upper_size, left_size; // upper size stores uper size of start address, left stores left size of base addr
