@@ -163,15 +163,18 @@ void wiz_init(void)
        Socket 0: UDP 5000 | 4KB RX/TX | No Multicast
        Socket 1: TCP 5100 | 4KB RX/TX | Timeout ACK*/
     wiz_write(SOCKET0, 0x02); // set socket 0 to UDP with no multicast
-    // wiz_write(SOCKET1, 0x01); // set socket 1 to TCP with ack on internal timeout
+    wiz_write(SOCKET1, 0x01); // set socket 1 to TCP with ack on internal timeout
     /* Divide 8KB of RX memory and 8KB of TX memory over sockets 0 and 1
     Byte representation divided into 4 has 2 bits presenting each socket from greatest to least
     ex. 1100 0000 assigns all memory to socket 3 (11 for 8KB) */
     wiz_write(RX_MEM_SIZE, 0x0A);  // assign 4kb to s0/s1 each  0000 1010 
     wiz_write(TX_MEM_SIZE, 0x0A);   // assign 4kb to s0/s1 each 0000 1010
     /* Bind sockets to port numbers */
-    wiz_write(SOCKET0_PORT_U, 0x13);
+    wiz_write(SOCKET0_PORT_U, 0x13); // 5000 UDP Socket 0
     wiz_write(SOCKET0_PORT_L, 0x88);
+     /* Bind sockets to port numbers */
+    wiz_write(SOCKET1_PORT_U, 0x17); // 6000 TCP Socket 1
+    wiz_write(SOCKET1_PORT_L, 0x70); 
 }
 
 void udp_open(void) 
@@ -406,71 +409,6 @@ void setup(void)
 void print_config(void) {
     serial_txstring("\n\rWizNet Adapter:\r\n\n");
 
-    // serial_txstring("   Mode . . . .  . . : ");
-    // serial_txstring(is_udp ? "UDP" : "TCP");
-    // serial_txstring("\r\n");
-
-    // serial_txstring("   IPv4 Address  . . : ");
-    // // serial_txnum(wiz_read(IP_1));
-    // serial_txstring(itoa(wiz_read(IP_1)));
-    // serial_txchar('.');
-    // // serial_txnum(wiz_read(IP_2));
-    // serial_txstring(itoa(wiz_read(IP_2)));
-    // serial_txchar('.');
-    // // serial_txnum(wiz_read(IP_3));
-    // serial_txstring(itoa(wiz_read(IP_3)));
-    // serial_txchar('.');
-    // // serial_txnum(wiz_read(IP_4));
-    // serial_txstring(itoa(wiz_read(IP_4)));
-    // serial_txstring("\r\n");
-
-    // serial_txstring("   RTU Address . . . : ");
-    // // serial_txnum(rtu);
-    // serial_txstring(rtu);
-    // serial_txstring("\r\n");
-
-    // serial_txstring("   Subnet Mask . . . : ");
-    // // serial_txnum(wiz_read(SUBNET_1));
-    // serial_txstring(itoa(wiz_read(SUBNET_1)));
-    // serial_txchar('.');
-    // // serial_txnum(wiz_read(SUBNET_2));
-    // serial_txstring(itoa(wiz_read(SUBNET_2)));
-    // serial_txchar('.');
-    // // serial_txnum(wiz_read(SUBNET_3));
-    // serial_txstring(itoa(wiz_read(SUBNET_3)));
-    // serial_txchar('.');
-    // // serial_txnum(wiz_read(SUBNET_4));
-    // serial_txstring(itoa(wiz_read(SUBNET_4)));
-    // serial_txstring("\r\n");
-
-    // serial_txstring("   Gateway Address . : ");
-    // // serial_txnum(wiz_read(GATEWAY_1));
-    // serial_txstring(itoa(wiz_read(GATEWAY_1)));
-    // serial_txchar('.');
-    // // serial_txnum(wiz_read(GATEWAY_2));
-    // serial_txstring(itoa(wiz_read(GATEWAY_2)));
-    // serial_txchar('.');
-    // // serial_txnum(wiz_read(GATEWAY_3));
-    // serial_txstring(itoa(wiz_read(GATEWAY_3)));
-    // serial_txchar('.');
-    // // serial_txnum(wiz_read(GATEWAY_4));
-    // serial_txstring(itoa(wiz_read(GATEWAY_4)));
-    // serial_txstring("\r\n");
-
-    // serial_txstring("   MAC Address . . . : ");
-    // serial_txhex(wiz_read(MAC_1));
-    // // serial_txchar(':');
-    // serial_txhex(wiz_read(MAC_2));
-    // // serial_txchar(':');
-    // serial_txhex(wiz_read(MAC_3));
-    // // serial_txchar(':');
-    // serial_txhex(wiz_read(MAC_4));
-    // // serial_txchar(':');
-    // serial_txhex(wiz_read(MAC_5));
-    // // serial_txchar(':');
-    // serial_txhex(wiz_read(MAC_6));
-    // serial_txstring("\n\r\n");
-
     serial_txstring("Set MODE> . . . . MODE=");
     serial_txstring(is_udp ? "UDP" : "TCP");
     serial_txstring("\r\n");
@@ -516,6 +454,24 @@ void print_config(void) {
 
 }
 
+void tcp_rx(void) {
+
+}
+
+void tcp_open(void) 
+{
+    /* Initialize TCP Socket*/
+    while (1) {
+        wiz_write(SOCKET1_COM, OPEN); // open socket
+        if (wiz_read(SOCKET1_STAT) != SOCK_INIT) {
+            wiz_write(SOCKET1_COM, CLOSED); // socket not initialized, retry
+        } else {
+            serial_txstring("UDP Socket 1 port 6000 open\r\n\0");
+            break;
+        }
+    }
+}
+
 void main(void)
 {
     delay_us(1000);
@@ -525,8 +481,12 @@ void main(void)
     udp_open(); // open udp socket
     uint8_t read;
 	while (1) {
-
-        udp_rx();
+        if (is_udp) {
+            udp_rx();
+        }
+        else {
+            tcp_rx();
+        }
         read = RX_data(); // get character from terminal
  
         /* Take input from valid keys and store in buffer*/
@@ -584,11 +544,17 @@ void main(void)
                 ((serial_in[5] == 'T' && serial_in[6] == 'C' && serial_in[7] == 'P') ||
                 (serial_in[5] == 'U' && serial_in[6] == 'D' && serial_in[7] == 'P'))) 
                 {
-                    if (serial_in[5] == 'T') {
+                    // close active socket and open corresponding socket
+                    if (serial_in[5] == 'T' && is_udp == true) {
                         is_udp = false;
+                        wiz_write(SOCKET0_COM, CLOSED);
+                        tcp_open();
+
                     }
-                    else {
+                    else if (is_udp == false) {
                         is_udp = true;
+                        wiz_write(SOCKET1_COM, CLOSED)
+                        udp_open();
                     }
                 } 
                 else {

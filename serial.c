@@ -29,17 +29,16 @@ void delay10(void)
 void serial_txchar(char ch)
 {
     SBUF=ch;       // Load the data to be transmitted
-    while(TI == 0);    // Wait till the data is trasmitted
+    while(TI == 0);    // Wait until the data is trasmitted, TI will be set to 1
         TI = 0;         //Clear the flag for next cycle.
 }
 void serial_txstring(char *string_ptr)
 {
 
-          while(*string_ptr) {
-            SBUF=*string_ptr++;       // Load the data to be transmitted
-            while(TI == 0);    // Wait till the data is trasmitted
-                TI = 0;    
-            // serial_txchar(*string_ptr++);
+          while(*string_ptr) {         // iterate over string buffer until null 
+            SBUF=*string_ptr++;       // load character byte into SBUF and increment to the next character
+            while(TI == 0);    // TI is set when SBUF is transmitted, wait for TI
+                TI = 0;    // clear the flag
           }
 }
 
