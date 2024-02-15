@@ -29,6 +29,7 @@ void wiz_set_addr(uint16_t address, uint8_t len) {
     }
 }
 
+// compares string against prepended command qualifier such as 'IP='
 bool better_strncmp(char* check, uint8_t len) 
 {
     for (uint8_t i = 0; i < len; i++) {
@@ -39,6 +40,7 @@ bool better_strncmp(char* check, uint8_t len)
     return true;
 } 
 
+// parses hex input for mac address
 bool hex_parse(void) {
     if (serial_pt != 16) {
         return false;
@@ -47,12 +49,15 @@ bool hex_parse(void) {
     char hex[3] = {'\0'};
     uint8_t num = 0;
     for (uint8_t i = 5; i < 16; i+=2) {
+        // check for alphanumerical character
         if (isalnum(serial_in[i]) && isalnum(serial_in[i-1])) {
             // Cocatenate byte in ascii
             hex[0] = serial_in[i-1];
             hex[1] = serial_in[i];
+            // convert byte hex string into n
             for (int i = 0; i < 2; i++) {
-                num *= 16;
+                num *= 16; // multiply by base 16 for every digit place
+                // add hex value with ascii translation
                 if (hex[i] >= '0' && hex[i] <= '9') {
                     num += hex[i] - '0';
                 }
@@ -64,8 +69,6 @@ bool hex_parse(void) {
                 }
             }
             addr[(i-4)/2] = num;
-            // Undo offset and compute index order
-            // addr[(i-4)/2] = strtol(hex, NULL, 16);
         } 
         else {
             return false;
@@ -127,11 +130,6 @@ void wiz_init(void)
 
     /* Config Initial Source Network Settings */
     // wiz_set_gateway(126,10,220,254);   // 126.10.220.254 <---gateway address // 7e.a.dc.fe
-    // wiz_write(GATEWAY_1, 126);
-    // wiz_write(GATEWAY_2, 10);
-    // wiz_write(GATEWAY_3, 220);
-    // wiz_write(GATEWAY_4, 254);
-
     addr[0] = 126;
     addr[1] = 10;
     addr[2] = 200;
@@ -139,10 +137,6 @@ void wiz_init(void)
     wiz_set_addr(GATEWAY_1, 4);
 
     // wiz_set_subnet(255,255,192,0);    // 255.255.192.0 <--- subnet mask // ff.ff.c0.0
-    // wiz_write(SUBNET_1, 255);
-    // wiz_write(SUBNET_2, 255);
-    // wiz_write(SUBNET_3, 192);
-    // wiz_write(SUBNET_4, 0);
     addr[0] = 255;
     addr[1] = 255;
     addr[2] = 192;
@@ -150,13 +144,6 @@ void wiz_init(void)
     wiz_set_addr(SUBNET_1, 4);
 
     // wiz_set_mac(0x00, 0x08, 0xdc, 0x24, 0x4b, 0x5e); // mac address read as hex
-    // wiz_write(MAC_1, 0x00);
-    // wiz_write(MAC_2, 0x08);
-    // wiz_write(MAC_3, 0xdc);
-    // wiz_write(MAC_4, 0x24);
-    // wiz_write(MAC_5, 0x4b);
-    // wiz_write(MAC_6, 0x5e);
-    
     addr[0] = 0x00;
     addr[1] = 0x08;
     addr[2] = 0xdc;
@@ -165,12 +152,7 @@ void wiz_init(void)
     addr[5] = 0x5e;
     wiz_set_addr(MAC_1, 6);
     
-    // wiz_set_ip(126,10,210,10);     // 126.10.218.163 <--- my pc // 126.10.200.0 7e.a.c8.0<--- set mcu
-    // wiz_write(IP_1, 126);
-    // wiz_write(IP_2, 10);
-    // wiz_write(IP_3, 210);
-    // wiz_write(IP_4, 10);
-
+    // wiz_set_ip(126,10,210,10);
     addr[0] = 126;
     addr[1] = 10;
     addr[2] = 210;
@@ -190,23 +172,6 @@ void wiz_init(void)
     /* Bind sockets to port numbers */
     wiz_write(SOCKET0_PORT_U, 0x13);
     wiz_write(SOCKET0_PORT_L, 0x88);
-
-                
-                /* Initialize TCP Socket*/
-                // while (tcp_open != true) {
-                //     wiz_write(SOCKET1_COM, OPEN);
-                //     if (wiz_read(SOCKET1_STAT) != SOCK_INIT) {
-                //         wiz_write(SOCKET1_COM, CLOSED);
-                //         continue;
-                //     } 
-                //     wiz_write(SOCKET1_COM, LISTEN);
-                //     if (wiz_read(SOCKET1_STAT) != SOCK_LISTEN) {
-                //         wiz_write(SOCKET1_COM, CLOSED);
-                //     } else {
-                //         tcp_open = true;
-                //     }
-                // } 
-
 }
 
 void udp_open(void) 
@@ -516,37 +481,28 @@ void print_config(void) {
     serial_txstring("\r\nSet IP> . . . . . IP=");
     serial_txstring(itoa(wiz_read(IP_1)));
     serial_txchar('.');
-    // serial_txnum(wiz_read(IP_2));
     serial_txstring(itoa(wiz_read(IP_2)));
     serial_txchar('.');
-    // serial_txnum(wiz_read(IP_3));
     serial_txstring(itoa(wiz_read(IP_3)));
     serial_txchar('.');
-    // serial_txnum(wiz_read(IP_4));
     serial_txstring(itoa(wiz_read(IP_4)));
 
     serial_txstring("\r\nSet SUBNET> . . . SUB=");
     serial_txstring(itoa(wiz_read(SUBNET_1)));
     serial_txchar('.');
-    // serial_txnum(wiz_read(SUBNET_2));
     serial_txstring(itoa(wiz_read(SUBNET_2)));
     serial_txchar('.');
-    // serial_txnum(wiz_read(SUBNET_3));
     serial_txstring(itoa(wiz_read(SUBNET_3)));
     serial_txchar('.');
-    // serial_txnum(wiz_read(SUBNET_4));
     serial_txstring(itoa(wiz_read(SUBNET_4)));
 
     serial_txstring("\r\nSet GATE> . . . . GATE=");
      serial_txstring(itoa(wiz_read(GATEWAY_1)));
     serial_txchar('.');
-    // serial_txnum(wiz_read(GATEWAY_2));
     serial_txstring(itoa(wiz_read(GATEWAY_2)));
     serial_txchar('.');
-    // serial_txnum(wiz_read(GATEWAY_3));
     serial_txstring(itoa(wiz_read(GATEWAY_3)));
     serial_txchar('.');
-    // serial_txnum(wiz_read(GATEWAY_4));
     serial_txstring(itoa(wiz_read(GATEWAY_4)));
 
     serial_txstring("\r\nSet MAC>  . . . . MAC=");
@@ -596,18 +552,14 @@ void main(void)
         {
             // serial_txnum(read);
             serial_in[serial_pt] = '\0';
-            serial_txstring("\r\nCOM>");
+            serial_txstring("\r\nCOM>\r\n");
             serial_txstring(serial_in);
             serial_txstring("\r\n");
-            // // evaluate config menu
+            // evaluate config menu
             if (serial_pt == 1 && serial_in[0] == '?') {
                 print_config();
             } else {
                 if (better_strncmp("IP=", 3) && addr_parse(3) ) {
-                    // wiz_write(IP_1, addr[0]);
-                    // wiz_write(IP_2, addr[1]);
-                    // wiz_write(IP_3, addr[2]);
-                    // wiz_write(IP_4, addr[3]);
                     wiz_set_addr(IP_1, 4);
                     // wiz_write(MODE, 0X80); // perform s/w reset
                 } 
@@ -617,33 +569,29 @@ void main(void)
                     }
                 }
                 else if(better_strncmp("SUB=", 4) && addr_parse(4)) {
-                    // wiz_write(SUBNET_1, addr[0]);
-                    // wiz_write(SUBNET_2, addr[1]);
-                    // wiz_write(SUBNET_3, addr[2]);
-                    // wiz_write(SUBNET_4, addr[3]);
                     wiz_set_addr(SUBNET_1, 4);
                     // wiz_write(MODE, 0X80); // perform s/w reset
                 }
                 else if(better_strncmp("MAC=", 4) && hex_parse()) {
-                    // wiz_write(MAC_1, addr[0]);
-                    // wiz_write(MAC_2, addr[1]);
-                    // wiz_write(MAC_3, addr[2]);
-                    // wiz_write(MAC_4, addr[3]);
-                    // wiz_write(MAC_5, addr[4]);
-                    // wiz_write(MAC_6, addr[5]);
                     wiz_set_addr(MAC_1, 6);
                 }
                 else if(better_strncmp("GATE=", 5) && addr_parse(5)) {
-                    // wiz_write(GATEWAY_1, addr[0]);
-                    // wiz_write(GATEWAY_2, addr[1]);
-                    // wiz_write(GATEWAY_3, addr[2]);
-                    // wiz_write(GATEWAY_4, addr[3]);
                     wiz_set_addr(GATEWAY_1, 4);
                     // wiz_write(MODE, 0X80); // perform s/w reset
 
                 }
+                else if (better_strncmp("MODE=", 5) && serial_pt == 8 && 
+                ((serial_in[5] == 'T' && serial_in[6] == 'C' && serial_in[7] == 'P') ||
+                (serial_in[5] == 'U' && serial_in[6] == 'D' && serial_in[7] == 'P'))) 
+                {
+                    if (serial_in[5] == 'T') {
+                        is_udp = false;
+                    }
+                    else {
+                        is_udp = true;
+                    }
+                } 
                 else {
-                    // invalid();
                     serial_txstring("Invalid, try <?>\r\n");
                 }
             }
