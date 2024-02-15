@@ -593,6 +593,7 @@ void tcp_rx_helper(void) {
 }
 void tcp_rx(void) {
     if (wiz_read(SOCKET1_IR) & 0x04) {  // check for Recv interrupt (bit 2/100/x04)
+        serial_txstring("pakcet?");
         tcp_rx_helper();
     }
 }
@@ -604,15 +605,15 @@ void tcp_open(void)
         wiz_write(SOCKET1_COM, OPEN); // open socket
         if (wiz_read(SOCKET1_STAT) != SOCK_INIT) {
             wiz_write(SOCKET1_COM, CLOSED); // socket not initialized, retry
-        } else {
-            serial_txstring("TCP Socket 1 port 6000 open\r\n\0");
-        }
-
+            continue;
+        } 
         wiz_write(SOCKET1_COM, LISTEN); // SET SOCKET TO SERVER MODE LISTEN
         if (wiz_read(SOCKET1_STAT) != SOCK_LISTEN) {
             wiz_write (SOCKET1_COM, CLOSED);
+            continue;
         }
         else {
+            serial_txstring("TCP Socket 1 port 6000 open\r\n\0");
             break;
         }
     }
@@ -632,6 +633,7 @@ void main(void)
         }
         else if (server_state == TCP) {
             tcp_rx();
+            tcp_close_state();
         }
         read = RX_data(); // get character from terminal
  
@@ -658,9 +660,9 @@ void main(void)
         {
             // serial_txnum(read);
             serial_in[serial_pt] = '\0';
-            serial_txstring("\r\nCOM>\r\n");
+            serial_txstring("\r\nCOM>");
             serial_txstring(serial_in);
-            serial_txstring("\r\n");
+            serial_txstring("\r\n\r\n");
             // evaluate config menu
             if (serial_pt == 1 && serial_in[0] == '?') {
                 print_config();
@@ -703,14 +705,14 @@ void main(void)
                         wiz_write(SOCKET0_COM, CLOSED);
                         tcp_open();
                     }
-                    else  {
+                    else if (serial_in[5] == 'U'&& server_state != UDP) {
                         server_state = UDP;
                         wiz_write(SOCKET1_COM, CLOSED);
                         udp_open();
                     }
                 } 
                 else {
-                    serial_txstring("Invalid, try <?>\r\n");
+                    serial_txstring("Invalid, try <?>\r\n\r\n");
                 }
             }
 
