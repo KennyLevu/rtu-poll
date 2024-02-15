@@ -224,7 +224,8 @@ void wiz_init(void)
        Socket 0: UDP 5000 | 4KB RX/TX | No Multicast
        Socket 1: TCP 5100 | 4KB RX/TX | Timeout ACK*/
     wiz_write(SOCKET0, 0x02); // set socket 0 to UDP with no multicast
-    wiz_write(SOCKET1, 0x01); // set socket 1 to TCP with ack on internal timeout
+    wiz_write(SOCKET1, 0x21); // set socket 1 to TCP without ack on internal timeout
+    // wiz_write(SOCKET1, 0x01); // set socket 1 to TCP without ack on internal timeout
     /* Divide 8KB of RX memory and 8KB of TX memory over sockets 0 and 1
     Byte representation divided into 4 has 2 bits presenting each socket from greatest to least
     ex. 1100 0000 assigns all memory to socket 3 (11 for 8KB) */
@@ -457,7 +458,7 @@ void udp_rx_helper(void)
     // Set received command
     wiz_write(SOCKET0_COM, RECV);
     // Clear s0_ir register by writing 1s
-    wiz_write(SOCKET0_IR, 0xff);
+    wiz_write(SOCKET0_IR, 0x1f);
     free(peer_data);
 }
 
@@ -468,11 +469,35 @@ void udp_rx(void)
         udp_rx_helper();
     }
 }
-
+/* Initialize TCP Socket in Server Mode*/
+void tcp_open(void) 
+{
+    while (1) {
+        wiz_write(SOCKET1_COM, OPEN); // open socket
+        if (wiz_read(SOCKET1_STAT) != SOCK_INIT) {
+            serial_txstring("z");
+            wiz_write(SOCKET1_COM, CLOSED); // socket not initialized, retry
+            // serial_txstring("infinite\r\n\0");
+            continue;
+        } 
+        wiz_write(SOCKET1_COM, LISTEN); // SET SOCKET TO SERVER MODE LISTEN
+        if (wiz_read(SOCKET1_STAT) != SOCK_LISTEN) {
+            wiz_write (SOCKET1_COM, CLOSED);
+            // serial_txstring("z");
+            continue;
+        }
+        else {
+            break;
+        }
+    }
+}
 void tcp_close_state(void) {
-    // check for FIN
-    if ((SOCKET1_IR & 0x02) || (SOCKET1_IR & 0x08)) { // discon interrupt bit or timeout inerrupt bit
-         wiz_write(SOCKET1_COM, CLOSED);
+    // check for FIN|| (wiz_read(SOCKET1_IR) & 0x08)
+    if ((wiz_read(SOCKET1_IR) & 0x02) || (wiz_read(SOCKET1_IR) & 0x08) ) { // x02 = discon  x08 = timeout  close on interrupt
+        // serial_txstring("closed??\t"); 
+        wiz_write(SOCKET1_COM, CLOSED);
+        wiz_write(SOCKET1_IR, 0x1f);
+        tcp_open();
     }
 
 
@@ -568,7 +593,7 @@ void tcp_rx_helper(void) {
 
     wiz_write(SOCKET1_COM, RECV);
     // Clear s1_ir register by writing 1s
-    wiz_write(SOCKET1_IR, 0xff);
+    wiz_write(SOCKET1_IR, 0x1f);
 
     if (peer_data[0] == rtu[0]) {
         for (int i = 0; i < rx_size; i++) { // Convert to uppercase
@@ -593,31 +618,11 @@ void tcp_rx_helper(void) {
 }
 void tcp_rx(void) {
     if (wiz_read(SOCKET1_IR) & 0x04) {  // check for Recv interrupt (bit 2/100/x04)
-        serial_txstring("pakcet?");
         tcp_rx_helper();
     }
 }
 
-/* Initialize TCP Socket in Server Mode*/
-void tcp_open(void) 
-{
-    while (1) {
-        wiz_write(SOCKET1_COM, OPEN); // open socket
-        if (wiz_read(SOCKET1_STAT) != SOCK_INIT) {
-            wiz_write(SOCKET1_COM, CLOSED); // socket not initialized, retry
-            continue;
-        } 
-        wiz_write(SOCKET1_COM, LISTEN); // SET SOCKET TO SERVER MODE LISTEN
-        if (wiz_read(SOCKET1_STAT) != SOCK_LISTEN) {
-            wiz_write (SOCKET1_COM, CLOSED);
-            continue;
-        }
-        else {
-            serial_txstring("TCP Socket 1 port 6000 open\r\n\0");
-            break;
-        }
-    }
-}
+
 
 void main(void)
 {
@@ -702,12 +707,13 @@ void main(void)
                     } 
                     else if (serial_in[5] == 'T' && server_state != TCP) {
                         server_state = TCP;
-                        wiz_write(SOCKET0_COM, CLOSED);
+                        wiz_write(SOCKET0_COM, CLOSED); // closeudp
                         tcp_open();
+                        serial_txstring("TCP Socket 1 port 6000 open\r\n\0");
                     }
                     else if (serial_in[5] == 'U'&& server_state != UDP) {
                         server_state = UDP;
-                        wiz_write(SOCKET1_COM, CLOSED);
+                        wiz_write(SOCKET1_COM, CLOSED); // closet cp
                         udp_open();
                     }
                 } 
