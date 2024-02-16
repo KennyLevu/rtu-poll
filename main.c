@@ -247,7 +247,6 @@ void udp_open(void)
         if (wiz_read(SOCKET0_STAT) != SOCK_UDP) {
             wiz_write(SOCKET0_COM, CLOSED); // socket not initialized, retry
         } else {
-            serial_txstring("UDP Socket 0 port 5000 open\r\n\0");
             break;
         }
     }
@@ -640,6 +639,11 @@ void main(void)
             tcp_rx();
             tcp_close_state();
         }
+        else {
+            udp_rx();
+            tcp_rx();
+            tcp_close_state();
+        }
         read = RX_data(); // get character from terminal
  
         /* Take input from valid keys and store in buffer*/
@@ -702,19 +706,25 @@ void main(void)
                     if (serial_in[5] == 'B') {
                         // set both >> TODO: CHECK IF OPENING AN ALREADY OPEN SOCKET CAUSES PRBLEMS
                         server_state = BOTH;
+                        wiz_write(SOCKET0_COM, CLOSED); // close udp
+                        wiz_write(SOCKET1_COM, CLOSED);  // close tcp
+
                         udp_open();
                         tcp_open();
+                        serial_txstring("UDP/TCP:5000/6000 OPEN\r\n\0");
+
                     } 
                     else if (serial_in[5] == 'T' && server_state != TCP) {
                         server_state = TCP;
-                        wiz_write(SOCKET0_COM, CLOSED); // closeudp
+                        wiz_write(SOCKET0_COM, CLOSED); // close udp
                         tcp_open();
-                        serial_txstring("TCP Socket 1 port 6000 open\r\n\0");
+                        serial_txstring("TCP:6000 OPEN\r\n\0");
                     }
                     else if (serial_in[5] == 'U'&& server_state != UDP) {
                         server_state = UDP;
-                        wiz_write(SOCKET1_COM, CLOSED); // closet cp
+                        wiz_write(SOCKET1_COM, CLOSED); // close tcp
                         udp_open();
+                        serial_txstring("UDP:5000 OPEN\r\n\0");
                     }
                 } 
                 else {
