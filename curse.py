@@ -2,7 +2,91 @@ import curses
 from curses import wrapper
 import string
 import random
+import socket
+import sys
+import threading
+
 from enum import Enum
+class Poll():
+    # Initialize polling statistics
+    packets_sent = 0
+    packets_received = 0
+    errors = 0
+
+    def __init__(self, ip, udp, tcp) -> None:
+        self.ip = ip
+        self.udp = udp
+        self.tcp = tcp
+    # get error rate
+    def get_errors(self):
+        if self.packets_sent == 0:
+            return 0
+        return float(self.errors / self.packets_sent) * 100.0
+    # poll udp socket
+    def poll_udp(self, message, timeout = 5):
+        output = "ERROR"
+        try:
+            # update packets sent
+            self.packets_sent += 1
+            # Create a UDP socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            # Set timeout for the socket
+            sock.settimeout(timeout)
+            # Send message
+            sock.sendto(message.encode(), (self.ip, self.udp))
+
+            # Receive response
+            data, addr = sock.recvfrom(1024)
+
+            # print("UDP Received:", data.decode())
+            
+
+        except socket.timeout:
+            # Update errors
+            # self.errors += 1
+            pass
+        except Exception as e:
+            self.errors += 1
+        else:
+            # Update packets received
+            self.packets_received += 1
+            output = data.decode()
+        finally:
+            # Close socket
+            sock.close()
+            return output
+            
+
+    def poll_tcp(self, message, timeout = 5):
+        output = "ERROR"
+        try:
+            # update packets sent
+            self.packets_sent += 1
+            # Create a TCP SOCKET
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # Set timeout for the socket
+            sock.settimeout(timeout)
+            # Connect to server
+            sock.connect((self.ip, self.tcp))
+            # Send message
+            sock.send(message.encode())
+            # Receive response
+            data, addr = sock.recvfrom(1024)
+            # print("TCP Received:", data.decode())
+            
+        except socket.timeout:
+            # Update errors
+            self.errors += 1
+        except Exception as e:
+            self.errors += 1
+        else:
+            # Update packets received
+            self.packets_received += 1
+            output = data.decode()
+        finally:
+            # Close socket
+            sock.close()
+            return output
 
 class Protocol(Enum):
     UDP = (1, "UDP")
@@ -78,17 +162,13 @@ def main(stdscr):
     in_win.clear()
     in_win.border(0, 0, 0, 0, 0, 0, 0, 0)
 
+    # Initialize Class Poll object has class values sent, received, errors
+    poll = Poll(ip_address, udp, tcp)
+
     # Initialize polling statistics
     mode = "UDP"
-    packets_sent = 0
-    packets_received = 0
-    errors = 0
     is_polling = True
-    send = rtu + gen_message() # prepend rtu #
-    receive  = ""
-   
-
-   
+    receive  = ""   
 
     # Help messages
     help2 = "q: QUIT"
@@ -107,11 +187,12 @@ def main(stdscr):
         # title
         stdscr.addstr(0, curses.COLS // 2 - (len(title) // 2), title, curses.A_BOLD | curses.color_pair(1) ) # set title with cyan color
         # update polling stats and mode
-        help1 = f"Enter: ping OFF" if is_polling else f"Enter: ping ON"
+        send = rtu + gen_message() # prepend rtu #
+        help1 = f"Enter: ON" if is_polling else f"Enter: OFF"
         display_mode = f"Mode  . : {mode}"
-        display_sent = f"Packets Sent: {packets_sent}"
-        display_received = f"Packets Received: {packets_received}"
-        display_errors = f"Error Rate: {errors}%"
+        display_sent = f"Packets Sent: {poll.packets_sent}"
+        display_received = f"Packets Received: {poll.packets_received}"
+        display_errors = f"Error Rate: {poll.get_errors()}%"
         display_msent = f"Message Sent: <{send}>"
         display_mreceived = f"Message Rec: [{receive}]"
         # dispaly updated values
@@ -131,6 +212,8 @@ def main(stdscr):
         in_win.addstr(3, 1, help3, curses.color_pair(4))
         in_win.addstr(1, 1, help1, curses.color_pair(1))
         in_win.addstr(2, 1, help2, curses.color_pair(3))
+        if (not is_polling):
+            in_win.addstr(4, 1, "Press any key to send one packet", curses.color_pair(2))
 
         # update screens
         in_win.refresh()
@@ -139,9 +222,9 @@ def main(stdscr):
         
         # handle polling
         if mode == "UDP":
-            pass
+            receive = poll.poll_udp(send, 2)
         elif mode == "TCP":
-            pass
+            receive = poll.poll_tcp(send, 2)
         elif mode == "BOTH":
             pass
 
@@ -170,6 +253,7 @@ def main(stdscr):
             packets_sent = 0
             packets_received = 0
             errors = 0
+        
     
 
 wrapper(main)
