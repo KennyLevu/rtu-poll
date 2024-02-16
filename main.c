@@ -254,7 +254,7 @@ void udp_open(void)
 
 void udp_tx(uint16_t data_size, uint8_t *data)
 {
-
+    TX = LOW;
     uint16_t tx_free = 0x0000, txwr = 0x0000; 
     uint16_t tx_offset, tx_start_addr, upper_size, left_size;
 
@@ -314,6 +314,7 @@ void udp_tx(uint16_t data_size, uint8_t *data)
         // check timeout bit
         serial_txstring("\r\nSend failed\r\n\0");
     }
+    TX = HIGH;
 }   
 
 
@@ -465,7 +466,9 @@ void udp_rx(void)
 {
     if (wiz_read(SOCKET0_IR) & 0x04) { // check for Recv interrupt (bit 2/ 100 / x04)
     // serial_txstring("WHY DOES THIS HAPPENT O ME");
+        RX = LOW;
         udp_rx_helper();
+        RX = HIGH;
     }
 }
 /* Initialize TCP Socket in Server Mode*/
@@ -502,6 +505,7 @@ void tcp_close_state(void) {
 
 }
 void tcp_tx(uint16_t data_size) {
+    TX = LOW;
     uint16_t tx_free = 0x0000, txwr = 0x0000; 
     uint16_t tx_offset, tx_start_addr, upper_size, left_size;
 
@@ -546,6 +550,7 @@ void tcp_tx(uint16_t data_size) {
         // check timeout bit
         serial_txstring("\r\nSend failed\r\n\0");
     }
+    TX = HIGH;
 }
 void tcp_rx_helper(void) {
     uint16_t rx_offset, rx_start_addr, upper_size, left_size; // upper size stores uper size of start address, left stores left size of base addr
@@ -617,7 +622,9 @@ void tcp_rx_helper(void) {
 }
 void tcp_rx(void) {
     if (wiz_read(SOCKET1_IR) & 0x04) {  // check for Recv interrupt (bit 2/100/x04)
+        RX = LOW;
         tcp_rx_helper();
+        RX = HIGH;
     }
 }
 

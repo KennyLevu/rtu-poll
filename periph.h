@@ -5,4 +5,6 @@
 #define CLK P2_1 // CLK pin
 #define MISO P2_2
 #define MOSI P2_3
+#define RX P2_4
+#define TX P2_5
 #endif
