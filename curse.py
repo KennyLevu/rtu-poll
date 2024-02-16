@@ -33,7 +33,7 @@ class Poll():
             # Set timeout for the socket
             sock.settimeout(timeout)
             # Send message
-            sock.sendto(message.encode(), (self.ip, self.udp))
+            sock.sendto(message.encode(), (self.ip, int(self.udp)))
 
             # Receive response
             data, addr = sock.recvfrom(1024)
@@ -42,10 +42,12 @@ class Poll():
             
 
         except socket.timeout:
+            # pass
             # Update errors
-            # self.errors += 1
-            pass
+            self.errors += 1
         except Exception as e:
+            # pass
+            print(e)
             self.errors += 1
         else:
             # Update packets received
@@ -67,7 +69,7 @@ class Poll():
             # Set timeout for the socket
             sock.settimeout(timeout)
             # Connect to server
-            sock.connect((self.ip, self.tcp))
+            sock.connect((self.ip,  int(self.udp)))
             # Send message
             sock.send(message.encode())
             # Receive response
@@ -162,7 +164,17 @@ def main(stdscr):
     in_win.clear()
     in_win.border(0, 0, 0, 0, 0, 0, 0, 0)
 
+
+
     # Initialize Class Poll object has class values sent, received, errors
+    if (ip_address == ""):
+        ip_address = "126.10.210.10"
+    if (udp == ""):
+        udp = "5000"
+    if (tcp == ""):
+        tcp = "6000"
+    if (rtu == ""):
+        rtu = "0"
     poll = Poll(ip_address, udp, tcp)
 
     # Initialize polling statistics
@@ -179,6 +191,8 @@ def main(stdscr):
     # Set initial getchar to non-blocking
     stdscr.nodelay(True) 
     while True:
+        # gen message
+        send = rtu + gen_message() # prepend rtu #
         # clear screen for updates
         in_win.clear()
         stdscr.clear()
@@ -187,7 +201,6 @@ def main(stdscr):
         # title
         stdscr.addstr(0, curses.COLS // 2 - (len(title) // 2), title, curses.A_BOLD | curses.color_pair(1) ) # set title with cyan color
         # update polling stats and mode
-        send = rtu + gen_message() # prepend rtu #
         help1 = f"Enter: ON" if is_polling else f"Enter: OFF"
         display_mode = f"Mode  . : {mode}"
         display_sent = f"Packets Sent: {poll.packets_sent}"
