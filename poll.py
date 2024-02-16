@@ -33,7 +33,7 @@ def poll_tcp(ip, port, message, timeout = 5):
         # Connect to server
         sock.connect((ip, port))
         # Send message
-        sock.send(message)
+        sock.send(message.encode())
         # Receive response
         data, addr = sock.recvfrom(1024)
         print("Received:", data.decode())
@@ -63,7 +63,9 @@ if __name__ == "__main__":
     if mode == 'UDP':
         poll_udp(ip, port, message)
     if mode == 'TCP':
+        # print("test")
         poll_tcp(ip, port, message)
+
     # if mode == 'BOTH':
     #     poll_both(ip, port, message)
 
