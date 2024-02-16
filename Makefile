@@ -45,4 +45,4 @@ clean:
 
 # Run Python script with UDP arguments
 udp:
-	py udp.py $(IP) $(PORT) "$(MESSAGE)"
+	py poll.py $(IP) $(PORT)	$(MODE) "$(MESSAGE)"

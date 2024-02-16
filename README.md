@@ -26,4 +26,4 @@ sdcc --model-small main.c
 stcgal -p COM8 -P stc89 -o cpu_6t_enabled=true  main.ihx
 
 script:
-make udp IP=126.10.210.11 PORT=5000 MESSAGE="0makepython test"
+make udp IP=126.10.210.11 PORT=5000 MODE=UDP MESSAGE="0makepython test"
