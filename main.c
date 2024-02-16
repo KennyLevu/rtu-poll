@@ -291,7 +291,7 @@ void udp_tx(uint16_t data_size, uint8_t *data)
 
     /* Overflow write to base address if overflow memory */
     if ( (tx_offset + data_size) > RXTX_MASK + 1) {
-    serial_txstring("\t overflow \r\n\0");
+    serial_txstring("\t udptx \r\n\0");
         // copy upper_size bytes to start addr
         upper_size = (RXTX_MASK + 1) - tx_offset;
         wiz_write_buf(tx_start_addr, upper_size, data);
@@ -359,14 +359,14 @@ void udp_rx_helper(void)
         2. get remote information and data size from header 
     */
     if ( (rx_offset + UDP_HEADER_SIZE) > (RXTX_MASK + 1) ) {
-        serial_txstring("Overflow");
+        serial_txstring("udp1");
         upper_size = (RXTX_MASK + 1) - rx_offset; // get difference between end of buffer and offset
         // wiz_read_buf(rx_start_addr, upper_size, peer_header);
         wiz_read_buf(rx_start_addr, upper_size, addr); 
 
         left_size = UDP_HEADER_SIZE - upper_size; //
         // wiz_read_buf(SOCKET0_RX_BASE, left_size, peer_header + (upper_size - 1)); // read from overflow point base of rx 
-        wiz_read_buf(SOCKET0_RX_BASE, left_size, addr + (upper_size - 1)); // read from overflow point base of rx
+        wiz_read_buf(SOCKET0_RX_BASE, left_size, addr + upper_size); // read from overflow point base of rx
         // update offset past header
         rx_offset = left_size;
     }
@@ -415,11 +415,15 @@ void udp_rx_helper(void)
             - Read data in two parts
     */
     if( (rx_offset + rx_size) > (RXTX_MASK + 1) ) {
-        serial_txstring("Overflow");
         upper_size = (RXTX_MASK + 1) - rx_offset; // get first part of data
+        serial_txstring(itoa(rx_size));
+        serial_txchar('\n');
+        serial_txstring(itoa(upper_size));
+        serial_txchar('\n');
         wiz_read_buf(rx_start_addr, upper_size, peer_data);
         left_size = data_size - upper_size; // get remaining data 
-        wiz_read_buf(rx_start_addr, left_size, peer_data + upper_size); // read from overflow point
+        serial_txstring(itoa(left_size));
+        wiz_read_buf(SOCKET0_RX_BASE, left_size, peer_data + upper_size); // read from overflow point
     }
     else {
         wiz_read_buf(rx_start_addr, data_size, peer_data);
