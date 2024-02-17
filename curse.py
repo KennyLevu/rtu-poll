@@ -71,7 +71,7 @@ class Poll():
             # Set timeout for the socket
             sock.settimeout(timeout)
             # Connect to server
-            sock.connect((self.ip,  int(self.udp)))
+            sock.connect((self.ip,  int(self.tcp)))
             # Send message
             sock.send(message.encode())
             # Receive response
