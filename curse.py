@@ -45,6 +45,8 @@ class Poll():
             # pass
             # Update errors
             self.errors += 1
+            output = "TIMEOUT"
+
         except Exception as e:
             # pass
             print(e)
@@ -76,11 +78,14 @@ class Poll():
             data, addr = sock.recvfrom(1024)
             # print("TCP Received:", data.decode())
             
-        except socket.timeout:
+        except socket.timeout as e:
+            print(e)
             # Update errors
             self.errors += 1
+            output = "TIMEOUT"
         except Exception as e:
             self.errors += 1
+            print(e)
         else:
             # Update packets received
             self.packets_received += 1
@@ -188,9 +193,10 @@ def main(stdscr):
     stdscr.refresh()
     curses.curs_set(0)  # Hide the cursor
 
-    # Set initial getchar to non-blocking
+    # Set initial getchar to non blocking
     stdscr.nodelay(True) 
     while True:
+
         # gen message
         send = rtu + gen_message() # prepend rtu #
         # clear screen for updates
@@ -233,14 +239,6 @@ def main(stdscr):
         stdscr.refresh()
         
         
-        # handle polling
-        if mode == "UDP":
-            receive = poll.poll_udp(send, 2)
-        elif mode == "TCP":
-            receive = poll.poll_tcp(send, 2)
-        elif mode == "BOTH":
-            pass
-
         # Listen for key press
         key = stdscr.getch()
 
@@ -266,6 +264,41 @@ def main(stdscr):
             packets_sent = 0
             packets_received = 0
             errors = 0
+
+        # handle polling
+        if is_polling:
+            if mode == "UDP":
+                receive = poll.poll_udp(send, 4)
+            elif mode == "TCP":
+                receive = poll.poll_tcp(send, 4)
+            elif mode == "BOTH":
+                pass
+
+        # # Listen for key press
+        # key = stdscr.getch()
+
+        # if key == curses.KEY_ENTER or key in [10,13]:
+        #     if (is_polling):
+        #         stdscr.nodelay(False) # make getch() blocking to turn off polling
+        #     elif (not is_polling):
+        #         stdscr.nodelay(True) # make getch() non-blocking to turn on polling
+        #     is_polling = not is_polling
+        # elif key == ord('q'):
+        #     curses.nocbreak()
+        #     curses.echo()
+        #     curses.endwin()
+        #     return
+        # elif key == ord('m'):
+        #     if mode == "UDP":
+        #         mode = "TCP"
+        #     elif mode == "TCP":
+        #         mode = "BOTH"
+        #     else:
+        #         mode = "UDP"
+        #     # reset polling statistics
+        #     packets_sent = 0
+        #     packets_received = 0
+        #     errors = 0
         
     
 
