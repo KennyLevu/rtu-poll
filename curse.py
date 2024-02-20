@@ -3,8 +3,8 @@ from curses import wrapper
 import string
 import random
 import socket
-import sys
-import threading
+import time
+
 
 from enum import Enum
 class Poll():
@@ -32,12 +32,14 @@ class Poll():
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             # Set timeout for the socket
             sock.settimeout(timeout)
+            # Record timestamp for response time
+            start_time = time.time()
             # Send message
             sock.sendto(message.encode(), (self.ip, int(self.udp)))
 
             # Receive response
             data, addr = sock.recvfrom(1024)
-
+            end_time = time.time()
             # print("UDP Received:", data.decode())
             
 
@@ -46,11 +48,13 @@ class Poll():
             # Update errors
             self.errors += 1
             output = "TIMEOUT"
-
+            end_time = 0
         except Exception as e:
             # pass
+            output = "ERROR"
             print(e)
             self.errors += 1
+            end_time = 0
         else:
             # Update packets received
             self.packets_received += 1
@@ -58,7 +62,7 @@ class Poll():
         finally:
             # Close socket
             sock.close()
-            return output
+            return (output, end_time - start_time)
             
 
     def poll_tcp(self, message, timeout = 5):
@@ -70,12 +74,15 @@ class Poll():
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             # Set timeout for the socket
             sock.settimeout(timeout)
+            # Record timestamp for response time
+            start_time = time.time()
             # Connect to server
             sock.connect((self.ip,  int(self.tcp)))
             # Send message
             sock.send(message.encode())
             # Receive response
             data, addr = sock.recvfrom(1024)
+            end_time = time.time()
             # print("TCP Received:", data.decode())
             
         except socket.timeout as e:
@@ -83,9 +90,12 @@ class Poll():
             # Update errors
             self.errors += 1
             output = "TIMEOUT"
+            end_time = 0
         except Exception as e:
             self.errors += 1
+            output = "ERROR"
             print(e)
+            end_time = 0
         else:
             # Update packets received
             self.packets_received += 1
@@ -93,7 +103,8 @@ class Poll():
         finally:
             # Close socket
             sock.close()
-            return output
+
+            return (output, end_time - start_time)
 
 class Protocol(Enum):
     UDP = (1, "UDP")
@@ -185,7 +196,7 @@ def main(stdscr):
     # Initialize polling statistics
     mode = "UDP"
     is_polling = True
-    receive  = ""   
+    receive  = ("", 0)
 
     # Help messages
     help2 = "q: QUIT"
@@ -213,7 +224,8 @@ def main(stdscr):
         display_received = f"Packets Received: {poll.packets_received}"
         display_errors = f"Error Rate: {poll.get_errors()}%"
         display_msent = f"Message Sent: <{send}>"
-        display_mreceived = f"Message Rec: [{receive}]"
+        display_mreceived = f"Message Rec: [{receive[0]}]"
+        display_ms = f"Response Time: {round(receive[1] * 1000)}ms"
         # dispaly updated values
         stdscr.addstr(5, int(curses.COLS * .7), display_mode, curses.A_BOLD | curses.color_pair(4) ) 
         stdscr.addstr(5, 4, display_sent, curses.A_BOLD | curses.color_pair(2) )
@@ -221,6 +233,7 @@ def main(stdscr):
         stdscr.addstr(7, 4, display_errors, curses.A_BOLD | curses.color_pair(3) )
         stdscr.addstr(8, 4, display_msent, curses.A_BOLD | curses.color_pair(2) )
         stdscr.addstr(9, 4, display_mreceived, curses.A_BOLD | curses.color_pair(2) )
+        stdscr.addstr(10, 4, display_ms, curses.A_BOLD | curses.color_pair(2) )
          # Output Network Config to right side of screen
         stdscr.addstr(6, int(curses.COLS * .7), mes_ip + ip_address, curses.A_BOLD | curses.color_pair(1) ) 
         stdscr.addstr(7, int(curses.COLS * .7), mes_rtu + rtu, curses.A_BOLD | curses.color_pair(1) )
@@ -261,9 +274,9 @@ def main(stdscr):
             else:
                 mode = "UDP"
             # reset polling statistics
-            packets_sent = 0
-            packets_received = 0
-            errors = 0
+            poll.packets_sent = 0
+            poll.packets_received = 0
+            poll.errors = 0
 
         # handle polling
         if is_polling:
