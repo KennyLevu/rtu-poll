@@ -4,6 +4,8 @@ import string
 import random
 import socket
 import time
+import select
+from enum import Enum
 
 
 from enum import Enum
@@ -30,38 +32,53 @@ class Poll():
             self.packets_sent += 1
             # Create a UDP socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            # Set socket to non-blocking
+            sock.setblocking(False)
             # Set timeout for the socket
-            sock.settimeout(timeout)
+            # sock.settimeout(timeout)
             # Record timestamp for response time
             start_time = time.time()
             # Send message
             sock.sendto(message.encode(), (self.ip, int(self.udp)))
-
-            # Receive response
-            data, addr = sock.recvfrom(1024)
-            end_time = time.time()
-            # print("UDP Received:", data.decode())
-            
-
-        except socket.timeout:
-            # pass
-            # Update errors
-            self.errors += 1
-            output = "TIMEOUT"
-            end_time = 0
+            # Wait for socket readiness
+            ready = select.select([sock], [], [], timeout)
+            if ready[0]:
+                # Receive response and calculate responsetime
+                data, addr = sock.recvfrom(1024)
+                end_time = time.time()
+                output = data.decode()
+                # Update packets received
+                self.packets_received += 1
+            else:
+                # Timeout occurred
+                end_time = 0
+                output = "TIMEOUT"
+                # Update errors
+                self.errors += 1
+            # # Receive response
+            # data, addr = sock.recvfrom(1024)
+            # end_time = time.time()
+            # # print("UDP Received:", data.decode())
+        # except socket.timeout:
+        #     # pass
+        #     # Update errors
+        #     self.errors += 1
+        #     output = "TIMEOUT"
+        #     end_time = 0
         except Exception as e:
             # pass
             output = "ERROR"
             print(e)
             self.errors += 1
             end_time = 0
-        else:
-            # Update packets received
-            self.packets_received += 1
-            output = data.decode()
+        # else:
+        #     # Update packets received
+        #     self.packets_received += 1
+        #     output = data.decode()
         finally:
             # Close socket
-            sock.close()
+            if sock:
+                sock.close()
             return (output, end_time - start_time)
             
 
@@ -72,25 +89,41 @@ class Poll():
             self.packets_sent += 1
             # Create a TCP SOCKET
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # Set socket to non-blocking
+            sock.setblocking(False)
             # Set timeout for the socket
-            sock.settimeout(timeout)
+            # sock.settimeout(timeout)
             # Record timestamp for response time
             start_time = time.time()
             # Connect to server
             sock.connect((self.ip,  int(self.tcp)))
             # Send message
             sock.send(message.encode())
-            # Receive response
-            data, addr = sock.recvfrom(1024)
-            end_time = time.time()
-            # print("TCP Received:", data.decode())
+             # Wait for socket readiness
+            ready = select.select([sock], [], [], timeout)
+            if ready[0]:
+                # Receive response and calculate response time
+                data, addr = sock.recvfrom(1024)
+                end_time = time.time()
+                output = data.decode()
+                # Update packets received
+                self.packets_received += 1
+            else:
+                # Timeout occurred
+                end_time = 0
+                output = "TIMEOUT"
+                # Update errors
+                self.errors += 1
+            # # Receive response
+            # data, addr = sock.recvfrom(1024)
+            # end_time = time.time()
             
-        except socket.timeout as e:
-            print(e)
-            # Update errors
-            self.errors += 1
-            output = "TIMEOUT"
-            end_time = 0
+        # except socket.timeout as e:
+        #     print(e)
+        #     # Update errors
+        #     self.errors += 1
+        #     output = "TIMEOUT"
+        #     end_time = 0
         except Exception as e:
             self.errors += 1
             output = "ERROR"
@@ -102,8 +135,8 @@ class Poll():
             output = data.decode()
         finally:
             # Close socket
-            sock.close()
-
+            if sock:
+                sock.close()
             return (output, end_time - start_time)
 
 class Protocol(Enum):
@@ -281,38 +314,10 @@ def main(stdscr):
         # handle polling
         if is_polling:
             if mode == "UDP":
-                receive = poll.poll_udp(send, 4)
+                receive = poll.poll_udp(send, 1)
             elif mode == "TCP":
-                receive = poll.poll_tcp(send, 4)
+                receive = poll.poll_tcp(send, 1)
             elif mode == "BOTH":
                 pass
-
-        # # Listen for key press
-        # key = stdscr.getch()
-
-        # if key == curses.KEY_ENTER or key in [10,13]:
-        #     if (is_polling):
-        #         stdscr.nodelay(False) # make getch() blocking to turn off polling
-        #     elif (not is_polling):
-        #         stdscr.nodelay(True) # make getch() non-blocking to turn on polling
-        #     is_polling = not is_polling
-        # elif key == ord('q'):
-        #     curses.nocbreak()
-        #     curses.echo()
-        #     curses.endwin()
-        #     return
-        # elif key == ord('m'):
-        #     if mode == "UDP":
-        #         mode = "TCP"
-        #     elif mode == "TCP":
-        #         mode = "BOTH"
-        #     else:
-        #         mode = "UDP"
-        #     # reset polling statistics
-        #     packets_sent = 0
-        #     packets_received = 0
-        #     errors = 0
-        
-    
 
 wrapper(main)
