@@ -226,19 +226,19 @@ def main(stdscr):
         rtu = "0"
     poll = Poll(ip_address, udp, tcp)
 
-    # Initialize polling statistics
-    mode = "UDP"
-    is_polling = True
-    receive  = ("", 0,"")
-
     # Help messages
     help2 = "q: QUIT"
     help3 = "m: MODE"
     stdscr.refresh()
     curses.curs_set(0)  # Hide the cursor
 
-    # Set initial getchar to non blocking
-    stdscr.nodelay(True) 
+    # Set initial getchar blocking state
+    stdscr.nodelay(False) 
+     # Initialize polling statistics
+    mode = "UDP"
+    is_polling = False
+    receive  = ("", 0,"")
+
     while True:
 
         # gen message
@@ -278,7 +278,7 @@ def main(stdscr):
         in_win.addstr(1, 1, help1, curses.color_pair(1))
         in_win.addstr(2, 1, help2, curses.color_pair(3))
         if (not is_polling):
-            in_win.addstr(4, 1, "Press any key to send one packet", curses.color_pair(2))
+            in_win.addstr(4, 1, "Press SPACEBAR to send one packet", curses.color_pair(2))
 
         # update screens
         in_win.refresh()
@@ -310,14 +310,16 @@ def main(stdscr):
             poll.packets_sent = 0
             poll.packets_received = 0
             poll.errors = 0
-
+        elif key ==  ord(' ') and not is_polling:
+            send_once = True
         # handle polling
-        if is_polling:
+        if is_polling or send_once:
             if mode == "UDP":
                 receive = poll.poll_udp(send, 1)
             elif mode == "TCP":
                 receive = poll.poll_tcp(send, 1)
             elif mode == "BOTH":
                 pass
+        send_once = False
 
 wrapper(main)
