@@ -79,7 +79,7 @@ class Poll():
             # Close socket
             if sock:
                 sock.close()
-            return (output, end_time - start_time)
+            return (output, end_time - start_time, message)
             
 
     def poll_tcp(self, message, timeout = 5):
@@ -137,7 +137,7 @@ class Poll():
             # Close socket
             if sock:
                 sock.close()
-            return (output, end_time - start_time)
+            return (output, end_time - start_time, message)
 
 class Protocol(Enum):
     UDP = (1, "UDP")
@@ -229,7 +229,7 @@ def main(stdscr):
     # Initialize polling statistics
     mode = "UDP"
     is_polling = True
-    receive  = ("", 0)
+    receive  = ("", 0,"")
 
     # Help messages
     help2 = "q: QUIT"
@@ -256,7 +256,7 @@ def main(stdscr):
         display_sent = f"Packets Sent: {poll.packets_sent}"
         display_received = f"Packets Received: {poll.packets_received}"
         display_errors = f"Error Rate: {poll.get_errors()}%"
-        display_msent = f"Message Sent: <{send}>"
+        display_msent = f"Message Sent: <{receive[2]}>"
         display_mreceived = f"Message Rec: [{receive[0]}]"
         display_ms = f"Response Time: {round(receive[1] * 1000)}ms"
         # dispaly updated values

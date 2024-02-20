@@ -315,6 +315,7 @@ void udp_tx(uint16_t data_size, uint8_t *data)
         serial_txstring("\r\nSend failed\r\n\0");
     }
     TX = HIGH;
+    RESPONSE = LOW;
 }   
 
 
@@ -435,7 +436,6 @@ void udp_rx(void)
         RX = LOW;
         RESPONSE = HIGH;
         udp_rx_helper();
-        RESPONSE = LOW;
         RX = HIGH;
     }
 }
@@ -519,6 +519,7 @@ void tcp_tx(uint16_t data_size) {
         serial_txstring("\r\nSend failed\r\n\0");
     }
     TX = HIGH;
+    RESPONSE = LOW;
 }
 void tcp_rx_helper(void) {
     uint16_t rx_offset, rx_start_addr, upper_size, left_size; // upper size stores uper size of start address, left stores left size of base addr
@@ -593,7 +594,6 @@ void tcp_rx(void) {
         RX = LOW;
         RESPONSE = HIGH;
         tcp_rx_helper();
-        RESPONSE = LOW;
         RX = HIGH;
     }
 }
@@ -622,6 +622,7 @@ void main(void)
             tcp_rx();
             tcp_close_state();
         }
+        RESPONSE = LOW;
         read = RX_data(); // get character from terminal
  
         /* Take input from valid keys and store in buffer*/
