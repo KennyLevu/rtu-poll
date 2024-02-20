@@ -7,4 +7,5 @@
 #define MOSI P2_3
 #define RX P2_4
 #define TX P2_5
-#endif
+#define RESPONSE P2_6
+#endif 

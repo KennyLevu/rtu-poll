@@ -433,7 +433,9 @@ void udp_rx(void)
     if (wiz_read(SOCKET0_IR) & 0x04) { // check for Recv interrupt (bit 2/ 100 / x04)
     // serial_txstring("WHY DOES THIS HAPPENT O ME");
         RX = LOW;
+        RESPONSE = HIGH;
         udp_rx_helper();
+        RESPONSE = LOW;
         RX = HIGH;
     }
 }
@@ -589,7 +591,9 @@ void tcp_rx_helper(void) {
 void tcp_rx(void) {
     if (wiz_read(SOCKET1_IR) & 0x04) {  // check for Recv interrupt (bit 2/100/x04)
         RX = LOW;
+        RESPONSE = HIGH;
         tcp_rx_helper();
+        RESPONSE = LOW;
         RX = HIGH;
     }
 }
@@ -604,6 +608,7 @@ void main(void)
     wiz_init();
     udp_open(); // open udp socket
     uint8_t read;
+    RESPONSE = LOW;
 	while (1) {
         if (server_state == UDP) {
             udp_rx();
