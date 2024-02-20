@@ -229,8 +229,8 @@ void wiz_init(void)
     /* Divide 8KB of RX memory and 8KB of TX memory over sockets 0 and 1
     Byte representation divided into 4 has 2 bits presenting each socket from greatest to least
     ex. 1100 0000 assigns all memory to socket 3 (11 for 8KB) */
-    wiz_write(RX_MEM_SIZE, 0x0A);  // assign 4kb to s0/s1 each  0000 1010 
-    wiz_write(TX_MEM_SIZE, 0x0A);   // assign 4kb to s0/s1 each 0000 1010
+    wiz_write(RX_MEM_SIZE, 0xAA);  // assign 4kb to s0/s1 each  0000 1010 
+    wiz_write(TX_MEM_SIZE, 0xAA);   // assign 4kb to s0/s1 each 0000 1010
     /* Bind sockets to port numbers */
     wiz_write(SOCKET0_PORT_U, 0x13); // 5000 UDP Socket 0
     wiz_write(SOCKET0_PORT_L, 0x88);
@@ -359,6 +359,9 @@ void udp_rx_helper(void)
             - copy header size bytes of start address to header address
         2. get remote information and data size from header 
     */
+   serial_txstring("\roffset:");
+   serial_txstring(itoa(rx_offset));
+   serial_txstring("\r\n");
     if ( (rx_offset + UDP_HEADER_SIZE) > (RXTX_MASK + 1) ) {
         serial_txstring("udp1");
         upper_size = (RXTX_MASK + 1) - rx_offset; // get difference between end of buffer and offset
@@ -494,7 +497,7 @@ void tcp_tx(uint16_t data_size) {
 
     /* Overflow write to base address if overflow memory */
     if ( (tx_offset + data_size) > RXTX_MASK + 1) {
-    serial_txstring("\t overflow \r\n\0");
+    // serial_txstring("\t overflow \r\n\0");
         // copy upper_size bytes to start addr
         upper_size = (RXTX_MASK + 1) - tx_offset;
         wiz_write_buf(tx_start_addr, upper_size, peer_data);
@@ -513,10 +516,10 @@ void tcp_tx(uint16_t data_size) {
     wiz_write(SOCKET1_COM, SEND);
 
     if (wiz_read(SOCKET1_COM == 0x00)) {
-        serial_txstring("Send complete\r\n\0");
+        // serial_txstring("Send complete\r\n\0");
     } else if (wiz_read(SOCKET0_IR) & 0x08) {
         // check timeout bit
-        serial_txstring("\r\nSend failed\r\n\0");
+        // serial_txstring("\r\nSend failed\r\n\0");
     }
     TX = HIGH;
     RESPONSE = LOW;
@@ -547,7 +550,7 @@ void tcp_rx_helper(void) {
     peer_data = malloc(sizeof(uint8_t) * rx_size);
     // Handle overflow socket memory
     if ( (rx_offset + rx_size) > (RXTX_MASK + 1) ) {
-        serial_txstring("Overflow");
+        // serial_txstring("Overflow");
         upper_size = (RXTX_MASK + 1) - rx_offset; // get difference between end of buffer and offset
         wiz_read_buf(rx_start_addr, upper_size, peer_data); 
         left_size = rx_size - upper_size; // get the remaining amount of data 

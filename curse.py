@@ -23,7 +23,7 @@ class Poll():
     def get_errors(self):
         if self.packets_sent == 0:
             return 0
-        return float(self.errors / self.packets_sent) * 100.0
+        return round(float(self.errors / self.packets_sent) * 100.0, 2)
     # poll udp socket
     def poll_udp(self, message, timeout = 5):
         output = "ERROR"
@@ -164,6 +164,12 @@ def gen_message():
     gen_char = [random.choice(string.ascii_lowercase) for _letter in range(len)] #list comprehension fill array up to len from ascii lowercase
     msg = ''.join(gen_char)
     return msg
+# generate 7 digit ascii string sequentially
+def gen_seven():
+    number = 0
+    while True:
+        yield str(number).zfill(7)  # Convert number to string with leading zeros
+        number += 1
 
 def main(stdscr):
     # clear and init screen
@@ -231,18 +237,22 @@ def main(stdscr):
     help3 = "m: MODE"
     stdscr.refresh()
     curses.curs_set(0)  # Hide the cursor
-
+    curses.noecho() # hide characters typed
     # Set initial getchar blocking state
     stdscr.nodelay(False) 
      # Initialize polling statistics
     mode = "UDP"
     is_polling = False
     receive  = ("", 0,"")
-
+    send_once = False
+    debug = False
+    gen = gen_seven()
     while True:
-
         # gen message
-        send = rtu + gen_message() # prepend rtu #
+        if debug:
+            send = rtu + next(gen)
+        else:
+            send = rtu + gen_message() # prepend rtu #
         # clear screen for updates
         in_win.clear()
         stdscr.clear()
@@ -251,7 +261,8 @@ def main(stdscr):
         # title
         stdscr.addstr(0, curses.COLS // 2 - (len(title) // 2), title, curses.A_BOLD | curses.color_pair(1) ) # set title with cyan color
         # update polling stats and mode
-        help1 = f"Enter: ON" if is_polling else f"Enter: OFF"
+        help1 = f"Enter: POLL ON" if is_polling else f"Enter: POLL OFF"
+        help4 = f"d: DEBUG ON" if debug else f"d: DEBUG OFF"
         display_mode = f"Mode  . : {mode}"
         display_sent = f"Packets Sent: {poll.packets_sent}"
         display_received = f"Packets Received: {poll.packets_received}"
@@ -279,6 +290,7 @@ def main(stdscr):
         in_win.addstr(2, 1, help2, curses.color_pair(3))
         if (not is_polling):
             in_win.addstr(4, 1, "Press SPACEBAR to send one packet", curses.color_pair(2))
+        in_win.addstr(1, 1 + 15 + 5, help4, curses.color_pair(1)) # column aligned by lengthof help1 message
 
         # update screens
         in_win.refresh()
@@ -299,6 +311,11 @@ def main(stdscr):
             curses.echo()
             curses.endwin()
             return
+        elif key == ord('d'):
+            debug = not debug
+            if debug:
+                gen = gen_seven()
+
         elif key == ord('m'):
             if mode == "UDP":
                 mode = "TCP"
