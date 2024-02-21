@@ -252,7 +252,7 @@ void udp_open(void)
     }
 }
 
-void udp_tx(uint16_t data_size, uint8_t *data)
+void udp_tx(uint16_t data_size)
 {
     TX = LOW;
     uint16_t tx_free = 0x0000, txwr = 0x0000; 
@@ -291,15 +291,15 @@ void udp_tx(uint16_t data_size, uint8_t *data)
 
     /* Overflow write to base address if overflow memory */
     if ( (tx_offset + data_size) > RXTX_MASK + 1) {
-    serial_txstring("\t udptx \r\n\0");
+        serial_txstring("\t udptx \r\n\0");
         // copy upper_size bytes to start addr
         upper_size = (RXTX_MASK + 1) - tx_offset;
-        wiz_write_buf(tx_start_addr, upper_size, data);
+        wiz_write_buf(tx_start_addr, upper_size, peer_data);
         left_size = (data_size - upper_size);
-        wiz_write_buf(SOCKET0_TX_BASE, left_size, data + upper_size);
+        wiz_write_buf(SOCKET0_TX_BASE, left_size, peer_data + upper_size);
     }
     else {
-        wiz_write_buf(tx_start_addr, data_size, data);
+        wiz_write_buf(tx_start_addr, data_size, peer_data);
     }
 
 
@@ -361,6 +361,8 @@ void udp_rx_helper(void)
     */
    serial_txstring("\roffset:");
    serial_txstring(itoa(rx_offset));
+   serial_txstring("\t rxrd: ");
+   serial_txstring(itoa(rxrd));
    serial_txstring("\r\n");
     if ( (rx_offset + UDP_HEADER_SIZE) > (RXTX_MASK + 1) ) {
         serial_txstring("udp1");
@@ -394,7 +396,7 @@ void udp_rx_helper(void)
         1. Check if data size overflows rx buffer
             - Read data in two parts
     */
-    if( (rx_offset + rx_size) > (RXTX_MASK + 1) ) {
+    if( (rx_offset + data_size) > (RXTX_MASK + 1) ) {
         upper_size = (RXTX_MASK + 1) - rx_offset; // get first part of data
         serial_txstring(itoa(data_size));
         serial_txchar('\n');
@@ -418,7 +420,7 @@ void udp_rx_helper(void)
                 // serial_txchar(peer_data[i]);
             }
         }
-        udp_tx(data_size, peer_data);
+        udp_tx(data_size);
 
     }
 
