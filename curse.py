@@ -67,48 +67,45 @@ class Poll():
             return (output, end_time - start_time, message)
             
 
-    def poll_tcp(self, message, timeout=5):
+    def poll_tcp(self, message, timeout = 5):
         output = "ERROR"
-        start_time = time.time()
-        end_time = 0
-        self.packets_sent += 1
         try:
-            # Create a TCP socket
+            # update packets sent
+            self.packets_sent += 1
+            # Create a TCP SOCKET
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            # Set socket to non-blocking
-            sock.setblocking(False)
-            # Initiate connection to the server
-            connect_result = sock.connect_ex((self.ip, int(self.tcp)))
-            if connect_result == 0:
-                # Connection attempt succeeded, wait for socket readiness
-                ready_to_write = select.select([], [sock], [], timeout)[1]
-                if ready_to_write:
-                    # Socket is ready for writing, send message
-                    sock.send(message.encode())
-                    # Wait for response
-                    ready_to_read, _, _ = select.select([sock], [], [], timeout)
-                    if ready_to_read:
-                        # Receive response
-                        data = sock.recv(1024)
-                        end_time = time.time()
-                        output = data.decode()
-                        self.packets_received += 1
-                    else:
-                        output = "TIMEOUT"
-                        self.errors += 1
-                else:
-                    output = "WRITE FAIL"
-                    self.errors += 1
-            else:
-                output = "CONNECT FAIL"
-                print(connect_result)
-                self.errors += 1
-        except Exception as e:
+            # Set timeout for the socket
+            sock.settimeout(timeout)
+            # Record timestamp for response time
+            start_time = time.time()
+            # Connect to server
+            sock.connect((self.ip,  int(self.tcp)))
+            # Send message
+            sock.send(message.encode())
+            # Receive response
+            data, addr = sock.recvfrom(1024)
+            end_time = time.time()
+            # print("TCP Received:", data.decode())
+            
+        except socket.timeout as e:
             print(e)
+            # Update errors
             self.errors += 1
+            output = "TIMEOUT"
+            end_time = 0
+        except Exception as e:
+            self.errors += 1
+            output = "ERROR"
+            print(e)
+            end_time = 0
+        else:
+            # Update packets received
+            self.packets_received += 1
+            output = data.decode()
         finally:
-            if sock:
-                sock.close()
+            # Close socket
+            sock.close()
+
             return (output, end_time - start_time, message)
 
 
