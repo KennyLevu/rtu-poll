@@ -28,9 +28,9 @@ class Poll():
     def poll_udp(self, message, timeout = 5):
         output = "ERROR"
         end_time = 0
+        # update packets sent
+        self.packets_sent += 1
         try:
-            # update packets sent
-            self.packets_sent += 1
             # Create a UDP socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             # Set socket to non-blocking
@@ -67,55 +67,50 @@ class Poll():
             return (output, end_time - start_time, message)
             
 
-    def poll_tcp(self, message, timeout = 5):
+    def poll_tcp(self, message, timeout=5):
         output = "ERROR"
+        start_time = time.time()
         end_time = 0
+        self.packets_sent += 1
         try:
-            # update packets sent
-            self.packets_sent += 1
-            # Create a TCP SOCKET
+            # Create a TCP socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             # Set socket to non-blocking
             sock.setblocking(False)
-            # Set timeout for the socket
-            # sock.settimeout(timeout)
-            # Record timestamp for response time
-            start_time = time.time()
-            # Connect to server
-            sock.connect((self.ip,  int(self.tcp)))
-             # Wait for socket to connect and be ready to write
-            ready_write = select.select([], [sock], [], timeout)[1]
-            if ready_write:
-                # Send message
-                print("read to write")
-                sock.send(message.encode())
-                ready_read, _, _ = select.select([sock], [], [], timeout)
-                if ready_read:
-                    # Receive response and calculate response time
-                    data, addr = sock.recvfrom(1024)
-                    end_time = time.time()
-                    output = data.decode()
-                    # Update packets received
-                    self.packets_received += 1
+            # Initiate connection to the server
+            connect_result = sock.connect_ex((self.ip, int(self.tcp)))
+            if connect_result == 0:
+                # Connection attempt succeeded, wait for socket readiness
+                ready_to_write = select.select([], [sock], [], timeout)[1]
+                if ready_to_write:
+                    # Socket is ready for writing, send message
+                    sock.send(message.encode())
+                    # Wait for response
+                    ready_to_read, _, _ = select.select([sock], [], [], timeout)
+                    if ready_to_read:
+                        # Receive response
+                        data = sock.recv(1024)
+                        end_time = time.time()
+                        output = data.decode()
+                        self.packets_received += 1
+                    else:
+                        output = "TIMEOUT"
+                        self.errors += 1
                 else:
-                    # Timeout occurred
-                    output = "TIMEOUT"
-                    # Update errors
+                    output = "WRITE FAIL"
                     self.errors += 1
-
+            else:
+                output = "CONNECT FAIL"
+                print(connect_result)
+                self.errors += 1
         except Exception as e:
-            self.errors += 1
-            output = "ERROR"
             print(e)
-        else:
-            # Update packets received
-            self.packets_received += 1
-            output = data.decode()
+            self.errors += 1
         finally:
-            # Close socket
             if sock:
                 sock.close()
             return (output, end_time - start_time, message)
+
 
 class Protocol(Enum):
     UDP = (1, "UDP")
@@ -312,7 +307,7 @@ def main(stdscr):
             if mode == "UDP":
                 receive = poll.poll_udp(send, 1)
             elif mode == "TCP":
-                receive = poll.poll_tcp(send, 2)
+                receive = poll.poll_tcp(send, 5)
             elif mode == "BOTH":
                 pass
         send_once = False
