@@ -6,7 +6,7 @@ import socket
 import time
 import select
 from enum import Enum
-
+import errno
 
 from enum import Enum
 class Poll():
@@ -23,10 +23,11 @@ class Poll():
     def get_errors(self):
         if self.packets_sent == 0:
             return 0
-        return round(float(self.errors / self.packets_sent) * 100.0, 2)
+        return round(float((self.packets_sent - self.packets_received) / self.packets_sent) * 100.0, 2)
     # poll udp socket
     def poll_udp(self, message, timeout = 5):
         output = "ERROR"
+        start_time = time.time()
         end_time = 0
         # update packets sent
         self.packets_sent += 1
@@ -54,12 +55,10 @@ class Poll():
                 # Timeout occurred
                 output = "TIMEOUT"
                 # Update errors
-                self.errors += 1
         except Exception as e:
             # pass
             output = "ERROR"
             print(e)
-            self.errors += 1
         finally:
             # Close socket
             if sock:
@@ -67,45 +66,46 @@ class Poll():
             return (output, end_time - start_time, message)
             
 
-    def poll_tcp(self, message, timeout = 5):
+    def poll_tcp(self, message, timeout=5):
         output = "ERROR"
+        end_time = 0
         try:
-            # update packets sent
-            self.packets_sent += 1
-            # Create a TCP SOCKET
+            # Create a TCP socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            # Set timeout for the socket
-            sock.settimeout(timeout)
             # Record timestamp for response time
             start_time = time.time()
-            # Connect to server
-            sock.connect((self.ip,  int(self.tcp)))
-            # Send message
-            sock.send(message.encode())
-            # Receive response
-            data, addr = sock.recvfrom(1024)
-            end_time = time.time()
-            # print("TCP Received:", data.decode())
-            
-        except socket.timeout as e:
-            print(e)
-            # Update errors
-            self.errors += 1
-            output = "TIMEOUT"
-            end_time = 0
-        except Exception as e:
-            self.errors += 1
-            output = "ERROR"
-            print(e)
-            end_time = 0
-        else:
-            # Update packets received
-            self.packets_received += 1
-            output = data.decode()
+            # Attempt to connect
+            sock.connect_ex((self.ip, int(self.tcp)))
+            # Wait for socket write readiness
+            ready = select.select([], [sock], [], timeout)
+            # sock.setblocking(False)  # Set socket to non-blocking
+            if ready[1]:
+                
+                # Update packets sent
+                self.packets_sent += 1
+                # Send message
+                sock.send(message.encode())
+                select.select([sock], [], [], timeout)
+                # Receive response
+                data = sock.recv(1024)
+                # Update packets received
+                self.packets_received += 1
+                # Calculate response time
+                end_time = time.time()
+                output = data.decode()
+            else:
+                # Timeout occurred
+                output = "TIMEOUT"
+
+        except socket.error as e:
+            # Handle exceptions
+            if e.errno == errno.WSAECONNRESET: # win error 10054
+                output = "CONNECTION DROPPED"
+                print("Error:", e)
         finally:
             # Close socket
-            sock.close()
-
+            if sock:
+                sock.close()
             return (output, end_time - start_time, message)
 
 
@@ -304,7 +304,7 @@ def main(stdscr):
             if mode == "UDP":
                 receive = poll.poll_udp(send, 1)
             elif mode == "TCP":
-                receive = poll.poll_tcp(send, 5)
+                receive = poll.poll_tcp(send, 3)
             elif mode == "BOTH":
                 pass
         send_once = False
