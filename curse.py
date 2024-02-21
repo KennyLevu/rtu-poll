@@ -107,7 +107,49 @@ class Poll():
             if sock:
                 sock.close()
             return (output, end_time - start_time, message)
+    # poll both udp and tcp sockets
+    def poll_both(self, message, timeout=5):
+        udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
+        start_time = time.time()
+        end_time = 0
+        udp_response = None
+        tcp_response = None
+
+        try:
+            print(self.ip, self.udp, self.tcp)
+            # Send UDP message
+            udp_sock.sendto(message.encode(), (self.ip, int(self.udp)))
+
+            # Attempt to connect TCP
+            tcp_sock.connect_ex((self.ip, int(self.tcp)))
+            tcp_sock.send(message.encode())
+
+            # Wait for  socket readiness with timeout
+            ready = select.select([udp_sock, tcp_sock], [], [], timeout)
+            if ready[0]:
+                # Check for UDP response
+                if udp_sock in ready[0]:
+                    data, addr = udp_sock.recvfrom(1024)
+                    udp_response = data.decode()
+                    end_time = time.time()
+
+                # Check for TCP response
+                if tcp_sock in ready[0]:
+                    data = tcp_sock.recv(1024)
+                    tcp_response = data.decode()
+                    end_time = time.time()
+
+        except Exception as e:
+            self.errors += 1
+            print(e)
+        finally:
+            # Close sockets
+            udp_sock.close()
+            tcp_sock.close()
+
+        return (udp_response, tcp_response, end_time - start_time, message)
 
 class Protocol(Enum):
     UDP = (1, "UDP")
@@ -205,6 +247,8 @@ def main(stdscr):
     # Help messages
     help2 = "q: QUIT"
     help3 = "m: MODE"
+    help5 = "r: REPORT"
+
     stdscr.refresh()
     curses.curs_set(0)  # Hide the cursor
     curses.noecho() # hide characters typed
@@ -214,6 +258,7 @@ def main(stdscr):
     mode = "UDP"
     is_polling = False
     receive  = ("", 0,"")
+    receive_both  = ("", "", 0,"")
     send_once = False
     debug = False
     gen = gen_seven()
@@ -237,9 +282,9 @@ def main(stdscr):
         display_sent = f"Packets Sent: {poll.packets_sent}"
         display_received = f"Packets Received: {poll.packets_received}"
         display_errors = f"Error Rate: {poll.get_errors()}%"
-        display_msent = f"Message Sent: <{receive[2]}>"
-        display_mreceived = f"Message Rec: [{receive[0]}]"
-        display_ms = f"Response Time: {round(receive[1] * 1000)}ms"
+        display_msent = f"Message Sent: [{receive[2]}]" if mode != "BOTH" else f"Message Sent: [{receive_both[3]}]"
+        display_mreceived = f"Message Rec: [{receive[0]}]" if mode != "BOTH" else f"Message Rec: UDP[{receive_both[0]}] TCP[{receive_both[1]}]"
+        display_ms = f"Response Time: {round(receive[1] * 1000)}ms" if mode != "BOTH" else f"Response Time: {round(receive_both[2]) * 1000}ms"
         # dispaly updated values
         stdscr.addstr(5, int(curses.COLS * .7), display_mode, curses.A_BOLD | curses.color_pair(4) ) 
         stdscr.addstr(5, 4, display_sent, curses.A_BOLD | curses.color_pair(2) )
@@ -255,11 +300,13 @@ def main(stdscr):
         stdscr.addstr(9, int(curses.COLS * .7), mes_tcp + tcp, curses.A_BOLD | curses.color_pair(1) )
 
         # Output helper text
-        in_win.addstr(3, 1, help3, curses.color_pair(4))
+        in_win.addstr(2, 1, help3, curses.color_pair(4))
+
         in_win.addstr(1, 1, help1, curses.color_pair(1))
-        in_win.addstr(2, 1, help2, curses.color_pair(3))
+        in_win.addstr(3, 1, help2, curses.color_pair(3))
         if (not is_polling):
             in_win.addstr(4, 1, "Press SPACEBAR to send one packet", curses.color_pair(2))
+            in_win.addstr(2, 1 + 15 + 5, help5, curses.color_pair(4))
         in_win.addstr(1, 1 + 15 + 5, help4, curses.color_pair(1)) # column aligned by lengthof help1 message
 
         # update screens
@@ -289,8 +336,8 @@ def main(stdscr):
         elif key == ord('m'):
             if mode == "UDP":
                 mode = "TCP"
-            elif mode == "TCP":
-                mode = "BOTH"
+            # elif mode == "TCP":
+            #     mode = "BOTH"
             else:
                 mode = "UDP"
             # reset polling statistics
@@ -299,14 +346,45 @@ def main(stdscr):
             poll.errors = 0
         elif key ==  ord(' ') and not is_polling:
             send_once = True
+        elif key ==  ord('r') and not is_polling:
+            with open("output.txt", "w") as file:
+                new_poll = Poll(ip_address, udp, tcp)
+                # count 1 - 100 on screen
+                max = 0
+                min = 999999
+                errors = 0
+                for i in range(1, 101):
+                    send = rtu + next(gen) if debug else rtu + gen_message()
+                    in_win.clear()
+                    stdscr.clear()
+                    stdscr.addstr(height // 2, width // 2 - len(str(i)) // 2, str(i))
+                    stdscr.refresh()
+                    if mode == "UDP":
+                        receive = new_poll.poll_udp(send, 1)
+                    elif mode == "TCP":
+                        receive = new_poll.poll_tcp(send, 3)
+                    if receive[1] > max and receive[0][0] == receive[2][0]:
+                        max = receive[1]
+                    elif receive[1] < min and receive[0][0] == receive[2][0]:
+                        min = receive[1]
+                    if receive[0][0] != receive[2][0]:
+                        errors += 1
+                    index = f"{str(i).ljust(4)}"
+                    sent_text = f"| Sent: [{receive[2]}]"
+                    rec_text = f"Received: <{receive[0]}>"
+                    time_text = f"time:{round(receive[1] * 1000)}ms\n"
+                    file.write(f"{index} {sent_text} {rec_text} {time_text}")
+                    # time.sleep(0.1)
+                file.write(f"max:{round(max * 1000)}ms min:{round(min * 1000)}ms ERRORS:{errors}")
+
         # handle polling
         if is_polling or send_once:
             if mode == "UDP":
                 receive = poll.poll_udp(send, 1)
             elif mode == "TCP":
                 receive = poll.poll_tcp(send, 3)
-            elif mode == "BOTH":
-                pass
+            # elif mode == "BOTH":
+            #     receive_both = poll.poll_both(send, 4)
         send_once = False
 
 wrapper(main)
