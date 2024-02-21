@@ -308,14 +308,8 @@ void udp_tx(uint16_t data_size)
     wiz_write(SOCKET0_TXWRU, (txwr >> 8) & 0xff);
     wiz_write(SOCKET0_TXWRL, txwr & 0xff);
     wiz_write(SOCKET0_COM, SEND);
-    if (wiz_read(SOCKET0_COM == 0x00)) {
-        serial_txstring("Send complete\r\n\0");
-    } else if (wiz_read(SOCKET0_IR) & 0x08) {
-        // check timeout bit
-        serial_txstring("\r\nSend failed\r\n\0");
-    }
+    
     TX = HIGH;
-    RESPONSE = LOW;
 }   
 
 
@@ -359,11 +353,11 @@ void udp_rx_helper(void)
             - copy header size bytes of start address to header address
         2. get remote information and data size from header 
     */
-   serial_txstring("\roffset:");
-   serial_txstring(itoa(rx_offset));
-   serial_txstring("\t rxrd: ");
-   serial_txstring(itoa(rxrd));
-   serial_txstring("\r\n");
+//    serial_txstring("\roffset:");
+//    serial_txstring(itoa(rx_offset));
+//    serial_txstring("\t rxrd: ");
+//    serial_txstring(itoa(rxrd));
+//    serial_txstring("\r\n");
     if ( (rx_offset + UDP_HEADER_SIZE) > (RXTX_MASK + 1) ) {
         serial_txstring("udp1");
         upper_size = (RXTX_MASK + 1) - rx_offset; // get difference between end of buffer and offset
@@ -398,13 +392,14 @@ void udp_rx_helper(void)
     */
     if( (rx_offset + data_size) > (RXTX_MASK + 1) ) {
         upper_size = (RXTX_MASK + 1) - rx_offset; // get first part of data
-        serial_txstring(itoa(data_size));
-        serial_txchar('\n');
-        serial_txstring(itoa(upper_size));
-        serial_txchar('\n');
+        serial_txstring("udpoff");
+        // serial_txstring(itoa(data_size));
+        // serial_txchar('\n');
+        // serial_txstring(itoa(upper_size));
+        // serial_txchar('\n');
         wiz_read_buf(rx_start_addr, upper_size, peer_data);
         left_size = data_size - upper_size; // get remaining data 
-        serial_txstring(itoa(left_size));
+        // serial_txstring(itoa(left_size));
         wiz_read_buf(SOCKET0_RX_BASE, left_size, peer_data + upper_size); // read from overflow point
     }
     else {
@@ -441,6 +436,13 @@ void udp_rx(void)
         RX = LOW;
         RESPONSE = HIGH;
         udp_rx_helper();
+        if (wiz_read(SOCKET0_COM == 0x00)) {
+            serial_txstring("Send complete\r\n\0");
+        } else if (wiz_read(SOCKET0_IR) & 0x08) {
+        // check timeout bit
+            serial_txstring("\r\nSend failed\r\n\0");
+        }
+        RESPONSE = LOW;
         RX = HIGH;
     }
 }
@@ -524,7 +526,6 @@ void tcp_tx(uint16_t data_size) {
         // serial_txstring("\r\nSend failed\r\n\0");
     }
     TX = HIGH;
-    RESPONSE = LOW;
 }
 void tcp_rx_helper(void) {
     uint16_t rx_offset, rx_start_addr, upper_size, left_size; // upper size stores uper size of start address, left stores left size of base addr
@@ -556,7 +557,7 @@ void tcp_rx_helper(void) {
         upper_size = (RXTX_MASK + 1) - rx_offset; // get difference between end of buffer and offset
         wiz_read_buf(rx_start_addr, upper_size, peer_data); 
         left_size = rx_size - upper_size; // get the remaining amount of data 
-        wiz_read_buf(SOCKET1_RX_BASE, left_size, peer_data + (upper_size - 1)); // read from overflow point base of rx
+        wiz_read_buf(SOCKET1_RX_BASE, left_size, peer_data + upper_size); // read from overflow point base of rx
     }
     else {
         // copy header size bytes of start addresss to header addr (copy the header)
@@ -584,14 +585,8 @@ void tcp_rx_helper(void) {
             // }
         }
         tcp_tx(rx_size);
+        RESPONSE = LOW;
     }
-    // else {
-    //     free(peer_data);
-    //     peer_data = malloc(sizeof(uint8_t) * 30);
-    //     peer_data = "Incorrect format or wrong RTU\0";
-    //     tcp_tx(30);
-
-    // }
     free(peer_data);
 }
 void tcp_rx(void) {

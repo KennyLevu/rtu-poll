@@ -27,6 +27,7 @@ class Poll():
     # poll udp socket
     def poll_udp(self, message, timeout = 5):
         output = "ERROR"
+        end_time = 0
         try:
             # update packets sent
             self.packets_sent += 1
@@ -51,30 +52,14 @@ class Poll():
                 self.packets_received += 1
             else:
                 # Timeout occurred
-                end_time = 0
                 output = "TIMEOUT"
                 # Update errors
                 self.errors += 1
-            # # Receive response
-            # data, addr = sock.recvfrom(1024)
-            # end_time = time.time()
-            # # print("UDP Received:", data.decode())
-        # except socket.timeout:
-        #     # pass
-        #     # Update errors
-        #     self.errors += 1
-        #     output = "TIMEOUT"
-        #     end_time = 0
         except Exception as e:
             # pass
             output = "ERROR"
             print(e)
             self.errors += 1
-            end_time = 0
-        # else:
-        #     # Update packets received
-        #     self.packets_received += 1
-        #     output = data.decode()
         finally:
             # Close socket
             if sock:
@@ -84,6 +69,7 @@ class Poll():
 
     def poll_tcp(self, message, timeout = 5):
         output = "ERROR"
+        end_time = 0
         try:
             # update packets sent
             self.packets_sent += 1
@@ -97,38 +83,30 @@ class Poll():
             start_time = time.time()
             # Connect to server
             sock.connect((self.ip,  int(self.tcp)))
-            # Send message
-            sock.send(message.encode())
-             # Wait for socket readiness
-            ready = select.select([sock], [], [], timeout)
-            if ready[0]:
-                # Receive response and calculate response time
-                data, addr = sock.recvfrom(1024)
-                end_time = time.time()
-                output = data.decode()
-                # Update packets received
-                self.packets_received += 1
-            else:
-                # Timeout occurred
-                end_time = 0
-                output = "TIMEOUT"
-                # Update errors
-                self.errors += 1
-            # # Receive response
-            # data, addr = sock.recvfrom(1024)
-            # end_time = time.time()
-            
-        # except socket.timeout as e:
-        #     print(e)
-        #     # Update errors
-        #     self.errors += 1
-        #     output = "TIMEOUT"
-        #     end_time = 0
+             # Wait for socket to connect and be ready to write
+            ready_write = select.select([], [sock], [], timeout)[1]
+            if ready_write:
+                # Send message
+                print("read to write")
+                sock.send(message.encode())
+                ready_read, _, _ = select.select([sock], [], [], timeout)
+                if ready_read:
+                    # Receive response and calculate response time
+                    data, addr = sock.recvfrom(1024)
+                    end_time = time.time()
+                    output = data.decode()
+                    # Update packets received
+                    self.packets_received += 1
+                else:
+                    # Timeout occurred
+                    output = "TIMEOUT"
+                    # Update errors
+                    self.errors += 1
+
         except Exception as e:
             self.errors += 1
             output = "ERROR"
             print(e)
-            end_time = 0
         else:
             # Update packets received
             self.packets_received += 1
@@ -334,7 +312,7 @@ def main(stdscr):
             if mode == "UDP":
                 receive = poll.poll_udp(send, 1)
             elif mode == "TCP":
-                receive = poll.poll_tcp(send, 1)
+                receive = poll.poll_tcp(send, 2)
             elif mode == "BOTH":
                 pass
         send_once = False
