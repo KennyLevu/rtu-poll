@@ -70,11 +70,11 @@ class Poll():
     def poll_tcp(self, message, timeout=5):
         output = "ERROR"
         end_time = 0
+        # Record timestamp for response time
+        start_time = time.time()
         try:
             # Create a TCP socket
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            # Record timestamp for response time
-            start_time = time.time()
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)    
             # Attempt to connect
             sock.connect_ex((self.ip, int(self.tcp)))
             # Wait for socket write readiness
@@ -158,7 +158,7 @@ class Poll():
         # print(end_time - start_time)
         # times = end_time - start_time
 
-        return (udp_response[0], tcp_response[0], end_time - start_time, message)
+        return (udp_response[0], tcp_response[0], udp_response[1], message, tcp_response[1])
 
 class Protocol(Enum):
     UDP = (1, "UDP")
@@ -267,7 +267,7 @@ def main(stdscr):
     mode = "UDP"
     is_polling = False
     receive  = ("", 0,"")
-    receive_both  = ("", "", 0,"")
+    receive_both  = ("", "", 0,"",0)
     send_once = False
     debug = False
     gen = gen_seven()
@@ -293,7 +293,7 @@ def main(stdscr):
         display_errors = f"Error Rate: {poll.get_errors()}%"
         display_msent = f"Message Sent: [{receive[2]}]" if mode != "BOTH" else f"Message Sent: [{receive_both[3]}]"
         display_mreceived = f"Message Rec: [{receive[0]}]" if mode != "BOTH" else f"Message Rec: UDP[{receive_both[0]}] TCP[{receive_both[1]}]"
-        display_ms = f"Response Time: {round(receive[1] * 1000)}ms" if mode != "BOTH" else f"Response TimeHELLO: {round(receive_both[2] * 1000)}ms"
+        display_ms = f"Response Time: {round(receive[1] * 1000)}ms" if mode != "BOTH" else f"UDP:{round(receive_both[2] * 1000)}ms TCP:{round(receive_both[4] * 1000)}ms"
         # dispaly updated values
         stdscr.addstr(5, int(curses.COLS * .7), display_mode, curses.A_BOLD | curses.color_pair(4) ) 
         stdscr.addstr(5, 4, display_sent, curses.A_BOLD | curses.color_pair(2) )
