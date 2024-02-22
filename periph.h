@@ -8,4 +8,5 @@
 #define RX P2_4
 #define TX P2_5
 #define RESPONSE P2_6
-#endif 
+#define INT0 P3_2
+#endif

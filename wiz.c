@@ -2,11 +2,6 @@
 #include <stdint.h>
 #include "periph.h"
 #include "constant.h"
-// #include "serial.c"
-
-// void serial_ln(void);
-// void serial_txnum(uint16_t val);
-
 
 // write bytes to MOSI 
 void cmdout_16(uint16_t command) 
@@ -39,6 +34,51 @@ void cmdout_8(uint8_t command)
         CLK = LOW;
     }
 }
+
+// void asmout_8(uint8_t command) 
+// {
+//     uint8_t i;
+//     for (i = 0; i < 8; i++) {
+//         asm volatile ( // tells compiler that the following is assembly code, volatile flags the code to prevent opimization 
+//             "mov     r1, %[cmd]       \n"  // Move the command to a register
+//             "srl     r1, #7           \n"  // Shift the command to get the most significant bit
+//             "jc      set_bit          \n"  // If carry flag is set, jump to set_bit label
+//             "clr     P2.3             \n"  // Clear P2.3 if the MSB is 0
+//             "sjmp    next_bit         \n"  // Jump to next_bit label
+//             "set_bit:                 \n"  // Label to set P2.3 if MSB is 1
+//             "setb    P2.3             \n"  // Set P2.3 if the MSB is 1
+//             "next_bit:                \n"  // Label to proceed to the next bit
+//             "setb    P2.1             \n"  // Set P2.1
+//             "clr     P2.1             \n"  // Clear P2.1
+//             : // No output operands
+//             : [cmd] "r" (command) // Input operand - command
+//             : "r1", "cc" // clobber list - register r1 and condition codes
+//         );
+//         command = command << 1; // Shift the command to the left by one bit
+//     }
+// }
+// void asm_16(uint16_t command) 
+// {
+//     uint8_t i;
+//     for (i = 0; i < 16; i++) {
+//         asm volatile ( 
+//             "mov     r1, %[cmd]       \n" 
+//             "srl     r1, #15          \n"
+//             "jc      set_bit          \n"
+//             "clr     P2.3             \n"
+//             "sjmp    next_bit         \n"
+//             "set_bit:                 \n"
+//             "setb    P2.3             \n"
+//             "next_bit:                \n"
+//             "setb    P2.1             \n"
+//             "clr     P2.1             \n"
+//             :
+//             : [cmd] "r" (command)
+//             : "r1", "cc"
+//         );
+//         command = command << 1;
+//     }
+// }
 
 // OP Write Instruction
 void wiz_write(uint16_t addr, uint8_t data) 
