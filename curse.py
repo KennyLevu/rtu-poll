@@ -111,6 +111,7 @@ class Poll():
                 sock.close()
             # Calculate response time
             end_time = time.time()
+            time.sleep(0.05)
             return (output, end_time - start_time, message)
     # poll both udp and tcp sockets
     def poll_both(self, message, timeout=5):
@@ -315,8 +316,8 @@ def main(stdscr):
         in_win.addstr(3, 1, help2, curses.color_pair(3))
         if (not is_polling):
             in_win.addstr(4, 1, "Press SPACEBAR to send one packet", curses.color_pair(2))
-            if (mode != "BOTH"): 
-                in_win.addstr(2, 1 + 15 + 5, help5, curses.color_pair(4))
+            # if (mode != "BOTH"): 
+            in_win.addstr(2, 1 + 15 + 5, help5, curses.color_pair(4))
         in_win.addstr(1, 1 + 15 + 5, help4, curses.color_pair(1)) # column aligned by lengthof help1 message
 
         # update screens
@@ -360,9 +361,12 @@ def main(stdscr):
             with open("output.txt", "w") as file:
                 new_poll = Poll(ip_address, udp, tcp)
                 # count 1 - 100 on screen
-                max = 0
-                min = 999999
+                max_tcp = 0.0
+                min_tcp = 999999
+                min_ms = 999999
                 errors = 0
+                receive_both =("","",0,"",0)
+                max_ms = 0.0
                 for i in range(1, 101):
                     send = rtu + next(gen) if debug else rtu + gen_message()
                     in_win.clear()
@@ -373,19 +377,33 @@ def main(stdscr):
                         receive = new_poll.poll_udp(send, 1)
                     elif mode == "TCP":
                         receive = new_poll.poll_tcp(send, 3)
-                    if receive[1] > max and receive[0][0] == receive[2][0]:
-                        max = receive[1]
-                    elif receive[1] < min and receive[0][0] == receive[2][0]:
-                        min = receive[1]
-                    if receive[0][0] != receive[2][0]:
-                        errors += 1
+                    elif mode == "BOTH":
+                        receive_both = new_poll.poll_both(send, 3)
+                    if mode != "BOTH":
+                        if receive[1] > max_ms and receive[0][0] == receive[2][0]:
+                            max_ms = receive[1]
+                        elif receive[1] < min_ms and receive[0][0] == receive[2][0]:
+                            min_ms = receive[1]
+                        if receive[0][0] != receive[2][0]:
+                            errors += 1
+                    elif mode == "BOTH":
+                        if receive_both[2] > max_ms:
+                            max_ms = receive_both[2]
+                        elif float(receive_both[2]) < float(min_ms):
+                            min_ms = receive_both[2]
+                        if float(receive_both[4]) > float(max_tcp):
+                            max_tcp = receive_both[4]
+                        elif receive_both[4] < float(min_tcp):
+                            min_tcp = receive_both[4]
+                        
                     index = f"{str(i).ljust(4)}"
-                    sent_text = f"| Sent: [{receive[2]}]"
-                    rec_text = f"Received: <{receive[0]}>"
-                    time_text = f"time:{round(receive[1] * 1000)}ms\n"
+                    sent_text = f"| Sent: [{receive[2]}]" if mode != "BOTH" else f"| Sent: [{receive_both[3]}]"
+                    rec_text = f"Received: <{receive[0]}>" if mode != "BOTH" else f"Received: UDP<{receive_both[0]}> TCP<{receive_both[1]}>"
+                    time_text = f"time:{round(receive[1] * 1000)}ms\n"  if mode != "BOTH" else f"UDP:{round(receive_both[2] * 1000)}ms TCP:{round(receive_both[4] * 1000)}ms\n"
                     file.write(f"{index} {sent_text} {rec_text} {time_text}")
                     # time.sleep(0.1)
-                file.write(f"max:{round(max * 1000)}ms min:{round(min * 1000)}ms ERRORS:{errors}")
+                file.write(f"max_ms:{round(max_ms * 1000)}ms min_ms:{round(min_ms * 1000)}ms ERRORS:{new_poll.errors}"  if mode != "BOTH" else 
+                           f"max_udp:{round(max_ms * 1000)}ms min_udp:{round(min_ms * 1000)}ms  max_tcp:{round(max_tcp * 1000)}ms min_tcp:{round(min_tcp * 1000)}ms ERRORS:{new_poll.errors}")
 
         # handle polling
         if is_polling or send_once:
@@ -393,10 +411,8 @@ def main(stdscr):
                 receive = poll.poll_udp(send, 1)
             elif mode == "TCP":
                 receive = poll.poll_tcp(send, 60)
-                time.sleep(0.05)
             elif mode == "BOTH":
                 receive_both = poll.poll_both(send, 60)
-                time.sleep(0.05)
         send_once = False
 
 wrapper(main)
