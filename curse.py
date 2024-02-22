@@ -7,6 +7,7 @@ import time
 import select
 from enum import Enum
 import errno
+import threading
 
 from enum import Enum
 class Poll():
@@ -85,23 +86,27 @@ class Poll():
                 self.packets_sent += 1
                 # Send message
                 sock.send(message.encode())
-                select.select([sock], [], [], timeout)
-                # Receive response
-                data = sock.recv(1024)
-                # Update packets received
-                self.packets_received += 1
-                # Calculate response time
-                end_time = time.time()
-                output = data.decode()
+                ready = select.select([sock], [], [], timeout)
+                if ready[0]:
+                    # Receive response
+                    data = sock.recv(1024)
+                    # Update packets received
+                    self.packets_received += 1
+                    # Calculate response time
+                    end_time = time.time()
+                    output = data.decode()
+                else:
+                    output = "TIMEOUT"
+                    self.errors += 1
             else:
                 # Timeout occurred
-                output = "TIMEOUT"
+                output = "CONNECTION FAILED"
 
         except socket.error as e:
             # Handle exceptions
-            if e.errno == errno.WSAECONNRESET: # win error 10054
-                output = "CONNECTION DROPPED"
-                print("Error:", e)
+            # if e.errno == errno.WSAECONNRESET: # win error 10054
+            #     output = "CONNECTION DROPPED"
+            print("Error:", e)
         finally:
             # Close socket
             if sock:
@@ -109,45 +114,46 @@ class Poll():
             return (output, end_time - start_time, message)
     # poll both udp and tcp sockets
     def poll_both(self, message, timeout=5):
-        udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
         start_time = time.time()
         end_time = 0
         udp_response = None
         tcp_response = None
 
-        try:
-            print(self.ip, self.udp, self.tcp)
-            # Send UDP message
-            udp_sock.sendto(message.encode(), (self.ip, int(self.udp)))
+        # Define functions for UDP and TCP polling
+        def poll_udp_task():
+            nonlocal udp_response
+            udp_response = self.poll_udp(message)
 
-            # Attempt to connect TCP
-            tcp_sock.connect_ex((self.ip, int(self.tcp)))
-            tcp_sock.send(message.encode())
+        def poll_tcp_task():
+            nonlocal tcp_response
+            tcp_response = self.poll_tcp(message)
 
-            # Wait for  socket readiness with timeout
-            ready = select.select([udp_sock, tcp_sock], [], [], timeout)
-            if ready[0]:
-                # Check for UDP response
-                if udp_sock in ready[0]:
-                    data, addr = udp_sock.recvfrom(1024)
-                    udp_response = data.decode()
-                    end_time = time.time()
+        # Create threads for UDP and TCP polling
+        udp_thread = threading.Thread(target=poll_udp_task)
+        tcp_thread = threading.Thread(target=poll_tcp_task)
 
-                # Check for TCP response
-                if tcp_sock in ready[0]:
-                    data = tcp_sock.recv(1024)
-                    tcp_response = data.decode()
-                    end_time = time.time()
+        # Start both threads
+        udp_thread.start()
+        tcp_thread.start()
 
-        except Exception as e:
+        # Wait for both threads to complete or timeout
+        udp_thread.join(timeout)
+        tcp_thread.join(timeout)
+
+        end_time = time.time()
+
+        # Check if threads are still alive (indicating timeout)
+        if udp_thread.is_alive():
+            # Handle UDP timeout
             self.errors += 1
-            print(e)
-        finally:
-            # Close sockets
-            udp_sock.close()
-            tcp_sock.close()
+            print("UDP timeout")
+            udp_response = "TIMEOUT"
+
+        if tcp_thread.is_alive():
+            # Handle TCP timeout
+            self.errors += 1
+            print("TCP timeout")
+            tcp_response = "TIMEOUT"
 
         return (udp_response, tcp_response, end_time - start_time, message)
 
@@ -336,8 +342,8 @@ def main(stdscr):
         elif key == ord('m'):
             if mode == "UDP":
                 mode = "TCP"
-            # elif mode == "TCP":
-            #     mode = "BOTH"
+            elif mode == "TCP":
+                mode = "BOTH"
             else:
                 mode = "UDP"
             # reset polling statistics
@@ -382,9 +388,11 @@ def main(stdscr):
             if mode == "UDP":
                 receive = poll.poll_udp(send, 1)
             elif mode == "TCP":
-                receive = poll.poll_tcp(send, 3)
-            # elif mode == "BOTH":
-            #     receive_both = poll.poll_both(send, 4)
+                receive = poll.poll_tcp(send, 60)
+                time.sleep(0.05)
+            elif mode == "BOTH":
+                receive_both = poll.poll_both(send, 60)
+                time.sleep(0.05)
         send_once = False
 
 wrapper(main)

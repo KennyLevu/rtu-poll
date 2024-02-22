@@ -46,43 +46,9 @@ void wiz_write(uint16_t addr, uint8_t data)
     CS = LOW;
     // uint8_t command = OP_WRITE;
     cmdout_8(OP_WRITE);
-    // for (uint8_t i = 0; i < BYTE_8; i++) {
-    //     if (command & MSK_8) {
-    //         MOSI = HIGH;
-    //     }
-    //     else {
-    //         MOSI = LOW;
-    //     }
-    //     // delay10();
-    //     CLK = HIGH;
-    //     command = command << 1;
-    //     CLK = LOW;
-    // }
-    // for (uint8_t i = 0; i < BYTE_16; i++) {
-    //     if (addr & MSK_16) {
-    //         MOSI = HIGH;
-    //     }
-    //     else {
-    //         MOSI = LOW;
-    //     }
-    //     // delay10();
-    //     CLK = HIGH;
-    //     addr = addr << 1;
-    //     CLK = LOW;
-    // }
+
     cmdout_16(addr);
-    // for (uint8_t i = 0; i < BYTE_8; i++) {
-    //     if (data & MSK_8) {
-    //         MOSI = HIGH;
-    //     }
-    //     else {
-    //         MOSI = LOW;
-    //     }
-    //     // delay10();
-    //     CLK = HIGH;
-    //     data = data << 1;
-    //     CLK = LOW;
-    // }
+
     cmdout_8(data);
     CS = HIGH;
 }
@@ -94,34 +60,9 @@ uint8_t wiz_read(uint16_t addr)
     uint8_t byte = 0; // hold output data
     // uint8_t command = OP_READ;
     cmdout_8(OP_READ);
-    // for (uint8_t i = 0; i < BYTE_8; i++) {
-    //     if (command & MSK_8) {
-    //         MOSI = HIGH;
-    //     }
-    //     else {
-    //         MOSI = LOW;
-    //     }
-    //     // delay10();
-    //     CLK = HIGH;
-    //     command = command << 1;
-    //     CLK = LOW;
-    // }
+
     cmdout_16(addr);
-    // for (uint8_t i = 0; i < BYTE_16; i++) {
-    //     if (addr & MSK_16) {
-    //         MOSI = HIGH;
-    //     }
-    //     else {
-    //         MOSI = LOW;
-    //     }
-    //     // delay10();
-    //     CLK = HIGH;
-    //     addr = addr << 1;
-    //     CLK = LOW;
-    // }
-    // delay_us(2);
-    // shift in data
-    // command = 0;
+
     for (uint8_t i = 0; i < 8; i++) {
         CLK = HIGH;
         // delay10();

@@ -338,7 +338,7 @@ void udp_rx_helper(void)
         2. get remote information and data size from header 
     */
     if ( (rx_offset + UDP_HEADER_SIZE) > (RXTX_MASK + 1) ) {
-        serial_txstring("udp1");
+        // serial_txstring("udp1");
         upper_size = (RXTX_MASK + 1) - rx_offset; // get difference between end of buffer and offset
         wiz_read_buf(rx_start_addr, upper_size, addr); 
 
@@ -558,7 +558,8 @@ void tcp_rx(void) {
         RESPONSE = HIGH;
         tcp_rx_helper();
         RX = HIGH;
-        tcp_close_state();
+        // tcp_close_state();
+
     }
 }
 
@@ -579,10 +580,13 @@ void main(void)
         }
         else if (server_state == TCP) {
             tcp_rx();
+            tcp_close_state();
         }
         else {
             udp_rx();
             tcp_rx();
+            tcp_close_staate();
+
         }
         RESPONSE = LOW;
         read = RX_data(); // get character from terminal
