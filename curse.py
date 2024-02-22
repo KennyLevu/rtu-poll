@@ -46,9 +46,8 @@ class Poll():
             # Wait for socket readiness
             ready = select.select([sock], [], [], timeout)
             if ready[0]:
-                # Receive response and calculate responsetime
+                # Receive response
                 data, addr = sock.recvfrom(1024)
-                end_time = time.time()
                 output = data.decode()
                 # Update packets received
                 self.packets_received += 1
@@ -64,6 +63,7 @@ class Poll():
             # Close socket
             if sock:
                 sock.close()
+            end_time = time.time()
             return (output, end_time - start_time, message)
             
 
@@ -92,8 +92,6 @@ class Poll():
                     data = sock.recv(1024)
                     # Update packets received
                     self.packets_received += 1
-                    # Calculate response time
-                    end_time = time.time()
                     output = data.decode()
                 else:
                     output = "TIMEOUT"
@@ -111,11 +109,13 @@ class Poll():
             # Close socket
             if sock:
                 sock.close()
+            # Calculate response time
+            end_time = time.time()
             return (output, end_time - start_time, message)
     # poll both udp and tcp sockets
     def poll_both(self, message, timeout=5):
         start_time = time.time()
-        end_time = 0
+        # print(start_time)
         udp_response = None
         tcp_response = None
 
@@ -140,7 +140,6 @@ class Poll():
         udp_thread.join(timeout)
         tcp_thread.join(timeout)
 
-        end_time = time.time()
 
         # Check if threads are still alive (indicating timeout)
         if udp_thread.is_alive():
@@ -154,8 +153,12 @@ class Poll():
             self.errors += 1
             print("TCP timeout")
             tcp_response = "TIMEOUT"
+        end_time = time.time()
+        # print(end_time)
+        # print(end_time - start_time)
+        # times = end_time - start_time
 
-        return (udp_response, tcp_response, end_time - start_time, message)
+        return (udp_response[0], tcp_response[0], end_time - start_time, message)
 
 class Protocol(Enum):
     UDP = (1, "UDP")
@@ -290,7 +293,7 @@ def main(stdscr):
         display_errors = f"Error Rate: {poll.get_errors()}%"
         display_msent = f"Message Sent: [{receive[2]}]" if mode != "BOTH" else f"Message Sent: [{receive_both[3]}]"
         display_mreceived = f"Message Rec: [{receive[0]}]" if mode != "BOTH" else f"Message Rec: UDP[{receive_both[0]}] TCP[{receive_both[1]}]"
-        display_ms = f"Response Time: {round(receive[1] * 1000)}ms" if mode != "BOTH" else f"Response Time: {round(receive_both[2]) * 1000}ms"
+        display_ms = f"Response Time: {round(receive[1] * 1000)}ms" if mode != "BOTH" else f"Response TimeHELLO: {round(receive_both[2] * 1000)}ms"
         # dispaly updated values
         stdscr.addstr(5, int(curses.COLS * .7), display_mode, curses.A_BOLD | curses.color_pair(4) ) 
         stdscr.addstr(5, 4, display_sent, curses.A_BOLD | curses.color_pair(2) )
@@ -312,7 +315,8 @@ def main(stdscr):
         in_win.addstr(3, 1, help2, curses.color_pair(3))
         if (not is_polling):
             in_win.addstr(4, 1, "Press SPACEBAR to send one packet", curses.color_pair(2))
-            in_win.addstr(2, 1 + 15 + 5, help5, curses.color_pair(4))
+            if (mode != "BOTH"): 
+                in_win.addstr(2, 1 + 15 + 5, help5, curses.color_pair(4))
         in_win.addstr(1, 1 + 15 + 5, help4, curses.color_pair(1)) # column aligned by lengthof help1 message
 
         # update screens

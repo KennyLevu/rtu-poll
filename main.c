@@ -585,7 +585,7 @@ void main(void)
         else {
             udp_rx();
             tcp_rx();
-            tcp_close_staate();
+            tcp_close_state();
 
         }
         RESPONSE = LOW;
