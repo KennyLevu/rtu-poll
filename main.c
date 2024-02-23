@@ -260,12 +260,12 @@ void udp_tx(uint16_t data_size)
     
 
 
-    wiz_write(SOCKET0_DIP1, addr[0]);
-    wiz_write(SOCKET0_DIP2, addr[1]);
-    wiz_write(SOCKET0_DIP3, addr[2]);
-    wiz_write(SOCKET0_DIP4, addr[3]);
-    wiz_write(SOCKET0_DPORU, addr[4]);
-    wiz_write(SOCKET0_DPORL, addr[5]);
+    // wiz_write(SOCKET0_DIP1, addr[0]);
+    // wiz_write(SOCKET0_DIP2, addr[1]);
+    // wiz_write(SOCKET0_DIP3, addr[2]);
+    // wiz_write(SOCKET0_DIP4, addr[3]);
+    // wiz_write(SOCKET0_DPORU, addr[4]);
+    // wiz_write(SOCKET0_DPORL, addr[5]);
 
     /* Calculate offset from write pointer*/
     txwr = txwr | (wiz_read(SOCKET0_TXWRU) << 8);
@@ -308,7 +308,7 @@ void udp_rx_helper(void)
 {
     uint16_t rx_offset, rx_start_addr, upper_size, left_size; // upper size stores uper size of start address, left stores left size of base addr
     uint8_t rxsizu, rxsizl; // stores upper and lower half of rx register size
-    uint16_t peer_port = 0x0000, data_size = 0x0000, rxrd = 0x0000;
+    uint16_t data_size = 0x0000, rxrd = 0x0000;
     uint16_t rx_size = 0x0000;
     /* Get rx register size by combinning upper and lower half size values */
     rxsizu = wiz_read(SOCKET0_RXSIZU);
@@ -351,16 +351,24 @@ void udp_rx_helper(void)
     }
     else {
         // copy header size bytes of start addresss to header addr (copy the header)
-        wiz_read_buf(rx_start_addr, UDP_HEADER_SIZE, addr);
+        // wiz_read_buf(rx_start_addr, UDP_HEADER_SIZE, addr);
+        for (int i = 0; i < 6; i++) {
+             wiz_write(SOCKET0_DIP1 + i, wiz_read(rx_start_addr + i));
+        }
+        // wiz_write(SOCKET0_DIP1, wiz_read(rx_start_addr + i));
+        // wiz_write(SOCKET0_DIP2, addr[1]);
+        // wiz_write(SOCKET0_DIP3, addr[2]);
+        // wiz_write(SOCKET0_DIP4, addr[3]);
+        // wiz_write(SOCKET0_DPORU, addr[4]);
+        // wiz_write(SOCKET0_DPORL, addr[5]);
         // update offset past header
         rx_offset += UDP_HEADER_SIZE;
     }
+    // data_size = data_size | (wiz_read(rx_start_addr + 6) << 8);
+    // data_size = data_size | wiz_read(rx_start_addr + 7);
+    data_size = rx_size - 8;
     // update start address 
     rx_start_addr = SOCKET0_RX_BASE + rx_offset;
-
-    peer_port = peer_port | addr[5];
-    data_size = data_size | (addr[6] << 8);
-    data_size = data_size | addr[7];
 
     // Allocate buffer for data size
     peer_data = malloc(sizeof(uint8_t) * data_size);
@@ -397,6 +405,7 @@ void udp_rx_helper(void)
             }
         }
         udp_tx(data_size);
+        RESPONSE = LOW;
     }
     free(peer_data);
 }

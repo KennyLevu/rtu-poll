@@ -4,7 +4,7 @@
 #include "periph.h"
 #include "constant.h"
 
-#define USE_ASM
+// #define USE_ASM
 #ifdef USE_ASM
 void asm_8(uint8_t command) 
 {
