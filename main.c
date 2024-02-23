@@ -438,7 +438,7 @@ void tcp_open(void)
 void tcp_close_state(void) {
     // Check for connection termination
     if (wiz_read(SOCKET1_IR) & 0x02) {
-        serial_txstring("disconnect received\r\n");
+        // serial_txstring("disconnect received\r\n");
         wiz_write(SOCKET1_COM, DISCON);  // DISCONNECT socket
         wiz_write(SOCKET1_IR, 0x1f); // clear interrupt bit
         wiz_write(SOCKET1_COM, CLOSED);
@@ -498,7 +498,7 @@ void tcp_tx(uint16_t data_size) {
     wiz_write(SOCKET1_TXWRU, (txwr >> 8) & 0xff);
     wiz_write(SOCKET1_TXWRL, txwr & 0xff);
     wiz_write(SOCKET1_COM, SEND);
-    serial_txstring("Finished SEND\r\n");
+    // serial_txstring("Finished SEND\r\n");
     TX = HIGH;
 }
 void tcp_rx_helper(void) {
@@ -547,7 +547,7 @@ void tcp_rx_helper(void) {
     wiz_write(SOCKET1_COM, RECV);
     // // Clear s1_ir register by writing 1s
     // wiz_write(SOCKET1_IR, 0x1f);
-    serial_txstring("Finished receive\r\n");
+    // serial_txstring("Finished receive\r\n");
     if (peer_data[0] == rtu[0]) {
         for (int i = 0; i < rx_size; i++) { // Convert to uppercase
             if (peer_data[i] >= 'a' && peer_data[i] <= 'z' ) {
@@ -562,12 +562,12 @@ void tcp_rx_helper(void) {
 }
 void tcp_rx(void) {
     if (wiz_read(SOCKET1_IR) & 0x01 ) { // chck or connection established bit 
-        serial_txstring("CON_IR: ");
-        serial_txstring(itoa(wiz_read(SOCKET1_IR)));
-        serial_txstring("   REC_IR: ");
+        // serial_txstring("CON_IR: ");
+        // serial_txstring(itoa(wiz_read(SOCKET1_IR)));
+        // serial_txstring("   REC_IR: ");
         wiz_write(SOCKET1_IR, 0x01); // clear CONNECTION established bit
         if (wiz_read(SOCKET1_IR) & 0x04) {  // check for Recv interrupt (bit 2/100/x04)
-            serial_txstring(itoa(wiz_read(SOCKET1_IR)));
+            // serial_txstring(itoa(wiz_read(SOCKET1_IR)));
             RX = LOW;
             RESPONSE = HIGH;
             tcp_rx_helper();
@@ -576,9 +576,9 @@ void tcp_rx(void) {
             // tcp_close_state();
             // Clear s1_ir register by writing 1s
             wiz_write(SOCKET1_IR, 0x04);
-            serial_txstring("   cleared:");
-            serial_txstring(itoa(wiz_read(SOCKET1_IR)));
-            serial_txstring("\r\n");
+            // serial_txstring("   cleared:");
+            // serial_txstring(itoa(wiz_read(SOCKET1_IR)));
+            // serial_txstring("\r\n");
 
         }
         else {

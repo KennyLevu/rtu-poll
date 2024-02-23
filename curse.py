@@ -26,12 +26,11 @@ class Poll():
             return 0
         return round(float((self.packets_sent - self.packets_received) / self.packets_sent) * 100.0, 2)
     # poll udp socket
-    def poll_udp(self, message, timeout = 5):
+    def poll_udp(self, message, timeout = 2):
         output = "ERROR"
         start_time = time.time()
         end_time = 0
         # update packets sent
-        self.packets_sent += 1
         try:
             # Create a UDP socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -43,6 +42,7 @@ class Poll():
             start_time = time.time()
             # Send message
             sock.sendto(message.encode(), (self.ip, int(self.udp)))
+            self.packets_sent += 1
             # Wait for socket readiness
             ready = select.select([sock], [], [], timeout)
             if ready[0]:
@@ -67,7 +67,7 @@ class Poll():
             return (output, end_time - start_time, message)
             
 
-    def poll_tcp(self, message, timeout=5):
+    def poll_tcp(self, message, timeout=2):
         output = "ERROR"
         end_time = 0
         # Record timestamp for response time
@@ -76,16 +76,16 @@ class Poll():
             #todo add timeout to tcp sock
             # Create a TCP socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(timeout)    
+            # sock.settimeout(timeout)    
+            sock.setblocking(False)
             # Attempt to connect
             sock.connect_ex((self.ip, int(self.tcp)))
             # Wait for socket write readiness
             ready = select.select([], [sock], [], timeout)
             # sock.setblocking(False)  # Set socket to non-blocking
             if ready[1]:
-                
-                # Update packets sent
                 self.packets_sent += 1
+                # Update packets sent
                 # Send message
                 sock.send(message.encode())
                 ready = select.select([sock], [], [], timeout)
@@ -114,9 +114,10 @@ class Poll():
                 sock.close()
             # Calculate response time
             end_time = time.time()
+            time.sleep(.05)
             return (output, end_time - start_time, message)
     # poll both udp and tcp sockets
-    def poll_both(self, message, timeout=5):
+    def poll_both(self, message, timeout=2):
         start_time = time.time()
         end1 = 0
         # print(start_time)
@@ -380,11 +381,11 @@ def main(stdscr):
                     stdscr.addstr(height // 2, width // 2 - len(str(i)) // 2, str(i))
                     stdscr.refresh()
                     if mode == "UDP":
-                        receive = new_poll.poll_udp(send, 1)
+                        receive = new_poll.poll_udp(send, 2)
                     elif mode == "TCP":
-                        receive = new_poll.poll_tcp(send, 3)
+                        receive = new_poll.poll_tcp(send, 2)
                     elif mode == "BOTH":
-                        receive_both = new_poll.poll_both(send, 3)
+                        receive_both = new_poll.poll_both(send, 2)
                     if mode != "BOTH":
                         if receive[1] > max_ms and receive[0][0] == receive[2][0]:
                             max_ms = receive[1]
@@ -414,11 +415,11 @@ def main(stdscr):
         # handle polling
         if is_polling or send_once:
             if mode == "UDP":
-                receive = poll.poll_udp(send, 1)
+                receive = poll.poll_udp(send, 2)
             elif mode == "TCP":
-                receive = poll.poll_tcp(send, 3)
+                receive = poll.poll_tcp(send, 2)
             elif mode == "BOTH":
-                receive_both = poll.poll_both(send, 3)
+                receive_both = poll.poll_both(send, 2)
         send_once = False
 
 wrapper(main)
