@@ -20,18 +20,24 @@ TARGET = main
 # Header files
 HEADERS = serial.h wiz.h periph.h constant.h
 
-# Object files
+# OBJ macro serves as a template that matches every file in SRC using a substitution reference $(...), 
+# it replaces SRC: by substituing every '.c' with a .rel file  .c=.rel
+# OBJ = main.rel serial.rel wiz.rel
 OBJ = $(SRC:.c=.rel)
 
-# Default target
+# Default target builds main.ihx
 all:	$(TARGET).ihx
 		make flash
 
-# Compile source files
+# Compile source files and relevant includes, target main.ihx depends on macro OBJ being updated before build process
+# compiles and links object files
 $(TARGET).ihx:	$(OBJ)
 	$(SDCC)		$(SDCC_FLAGS)	$(OBJ)
 
-# Compile header files
+# Compile header files generating %.rel object file for every .c file '%.rel: %.c'
+# pattern rule % matches any string, $() substitution reference matches dependency on header files (good practice) for any updates on .h
+# compiles object files with -c 
+# the $< pattern is an automatic variable, $< represents the first prerequeisite required to create output file, in this case it will expand to each c file main.c, serial.c, wiz.c
 %.rel:	%.c	$(HEADERS)
 	$(SDCC)	$(SDCC_FLAGS)	-c	$<
 
