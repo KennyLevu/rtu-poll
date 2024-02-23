@@ -293,7 +293,7 @@ def main(stdscr):
         # title
         stdscr.addstr(0, curses.COLS // 2 - (len(title) // 2), title, curses.A_BOLD | curses.color_pair(1) ) # set title with cyan color
         # update polling stats and mode
-        help1 = f"Enter: POLL ON" if is_polling else f"Enter: POLL OFF"
+        help1 = f"SPACE: POLL ON" if is_polling else f"SPACE: POLL OFF"
         help4 = f"d: DEBUG ON" if debug else f"d: DEBUG OFF"
         display_mode = f"Mode  . : {mode}"
         display_sent = f"Packets Sent: {poll.packets_sent}"
@@ -322,7 +322,7 @@ def main(stdscr):
         in_win.addstr(1, 1, help1, curses.color_pair(1))
         in_win.addstr(3, 1, help2, curses.color_pair(3))
         if (not is_polling):
-            in_win.addstr(4, 1, "Press SPACEBAR to send one packet", curses.color_pair(2))
+            in_win.addstr(4, 1, "Press ENTER to send one packet", curses.color_pair(2))
             # if (mode != "BOTH"): 
             in_win.addstr(2, 1 + 15 + 5, help5, curses.color_pair(4))
         in_win.addstr(1, 1 + 15 + 5, help4, curses.color_pair(1)) # column aligned by lengthof help1 message
@@ -335,7 +335,7 @@ def main(stdscr):
         # Listen for key press
         key = stdscr.getch()
 
-        if key == curses.KEY_ENTER or key in [10,13]:
+        if key ==  ord(' '):
             if (is_polling):
                 stdscr.nodelay(False) # make getch() blocking to turn off polling
             elif (not is_polling):
@@ -362,7 +362,7 @@ def main(stdscr):
             poll.packets_sent = 0
             poll.packets_received = 0
             poll.errors = 0
-        elif key ==  ord(' ') and not is_polling:
+        elif key == curses.KEY_ENTER or key in [10,13]:
             send_once = True
         elif key ==  ord('r') and not is_polling:
             with open("output.txt", "w") as file:
