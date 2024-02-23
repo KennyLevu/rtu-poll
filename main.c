@@ -75,6 +75,7 @@ void print_config(void) {
     serial_txstring("\n\r\n");
 
 }
+
 // write to 4 address registers
 void wiz_set_addr(uint16_t address, uint8_t len) {
     for (int i = 0; i < len; i ++) {
@@ -100,31 +101,31 @@ bool hex_parse(void) {
     }
     // loop over buffer for max address length after MAC=
     char hex[3] = {'\0'};
-    uint8_t num = 0;
+    uint8_t num = 0; // initialize num holds decimal value of hex
+    // loops over relevant hex values after MAC=, increments by 2 for every hex byte 6 times
     for (uint8_t i = 5; i < 16; i+=2) {
-        // check for alphanumerical character
-        if (isalnum(serial_in[i]) && isalnum(serial_in[i-1])) {
+        // check for alphanumerical character in hex representation
+        if (isalnum(serial_in[i]) && isalnum(serial_in[i-1])) { // validate hex byte representations as alphanumeric
             // Cocatenate byte in ascii
             hex[0] = serial_in[i-1];
             hex[1] = serial_in[i];
-            // convert byte hex string into n
-            for (int i = 0; i < 2; i++) {
-                num *= 16; // multiply by base 16 for every digit place
-                // add hex value with ascii translation
+            // convert hex string into decimal represenation
+            for (int i = 0; i < 2; i++) { // loops hex byte from left to right in ascii
+                num *= 16; // multiply by base 16 for each digit place from the left  ex. 0x42 --> num += 4, 4*16 = 64; num+=2, end loop:66
                 if (hex[i] >= '0' && hex[i] <= '9') {
-                    num += hex[i] - '0';
+                    num += hex[i] - '0'; // convert ascii num into decimal and adds it to num
                 }
                 else if (hex[i] >= 'A' && hex[i] <= 'F') {
-                    num += hex[i] - 'A' + 10;
+                    num += hex[i] - 'A' + 10; // convert ascii letter into decimal and adds it to num
                 }
-                else {
-                    return false;
+                else { 
+                    return false; // character is out of range for base 16, ex. 'Z'
                 }
             }
-            addr[(i-4)/2] = num;
+            addr[(i-4)/2] = num; //  set decimal value for byte in relevant address position, offset by 4 for MAC=, divide by 2 for every 2 hex digits = 1 byte
         } 
         else {
-            return false;
+            return false; // non alphanum character detected
         }
     }
        
