@@ -75,7 +75,8 @@ class Poll():
         try:
             #todo add timeout to tcp sock
             # Create a TCP socket
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)    
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(timeout)    
             # Attempt to connect
             sock.connect_ex((self.ip, int(self.tcp)))
             # Wait for socket write readiness
@@ -95,11 +96,12 @@ class Poll():
                     self.packets_received += 1
                     output = data.decode()
                 else:
-                    output = "TIMEOUT"
+                    output = "TIMEOUT ON RECV"
                     self.errors += 1
             else:
-                # Timeout occurred
+                # Timeout occurred on connections
                 output = "CONNECTION FAILED"
+
 
         except socket.error as e:
             # Handle exceptions
@@ -112,7 +114,6 @@ class Poll():
                 sock.close()
             # Calculate response time
             end_time = time.time()
-            time.sleep(0.05)
             return (output, end_time - start_time, message)
     # poll both udp and tcp sockets
     def poll_both(self, message, timeout=5):

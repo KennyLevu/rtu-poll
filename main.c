@@ -436,13 +436,26 @@ void tcp_open(void)
     }
 }
 void tcp_close_state(void) {
-    // check for FIN|| (wiz_read(SOCKET1_IR) & 0x08)
-    if ((wiz_read(SOCKET1_IR) & 0x02) || (wiz_read(SOCKET1_IR) & 0x08) ) { // x02 = discon  x08 = timeout  close on interrupt
-        // serial_txstring("closed??\t"); 
+    // Check for connection termination
+    if (wiz_read(SOCKET1_IR) & 0x02) {
+        serial_txstring("disconnect received\r\n");
+        wiz_write(SOCKET1_COM, DISCON);  // DISCONNECT socket
+        wiz_write(SOCKET1_IR, 0x1f); // clear interrupt bit
         wiz_write(SOCKET1_COM, CLOSED);
-        wiz_write(SOCKET1_IR, 0x1f);
         tcp_open();
     }
+    else if (wiz_read(SOCKET1_IR & 0x08)) {
+        wiz_write(SOCKET1_COM, DISCON);  // DISCONNECT socket
+        wiz_write(SOCKET1_IR, 0x1f); // clear interrupt bit
+        wiz_write(SOCKET1_COM, CLOSED);
+        tcp_open();
+    }
+    // if ((wiz_read(SOCKET1_IR) & 0x02) || (wiz_read(SOCKET1_IR) & 0x08) ) { // x02 = discon  x08 = timeout  close on interrupt
+    //     // serial_txstring("closed??\t"); 
+    //     wiz_write(SOCKET1_COM, CLOSED);
+    //     wiz_write(SOCKET1_IR, 0x1f);
+    //     tcp_open();
+    // }
 
 
 }
@@ -486,12 +499,6 @@ void tcp_tx(uint16_t data_size) {
     wiz_write(SOCKET1_TXWRL, txwr & 0xff);
     wiz_write(SOCKET1_COM, SEND);
     serial_txstring("Finished SEND\r\n");
-    if (wiz_read(SOCKET1_COM == 0x00)) {
-        serial_txstring("Send complete\r\n");
-    } else if (wiz_read(SOCKET0_IR) & 0x08) {
-        // check timeout bit
-        serial_txstring("\r\nSend failed\r\n");
-    }
     TX = HIGH;
 }
 void tcp_rx_helper(void) {
@@ -561,7 +568,6 @@ void tcp_rx(void) {
         wiz_write(SOCKET1_IR, 0x01); // clear CONNECTION established bit
         if (wiz_read(SOCKET1_IR) & 0x04) {  // check for Recv interrupt (bit 2/100/x04)
             serial_txstring(itoa(wiz_read(SOCKET1_IR)));
-            serial_txstring("\r\n");
             RX = LOW;
             RESPONSE = HIGH;
             tcp_rx_helper();
@@ -569,15 +575,20 @@ void tcp_rx(void) {
             RX = HIGH;
             // tcp_close_state();
             // Clear s1_ir register by writing 1s
-            wiz_write(SOCKET1_IR, 0x1f);
+            wiz_write(SOCKET1_IR, 0x04);
+            serial_txstring("   cleared:");
+            serial_txstring(itoa(wiz_read(SOCKET1_IR)));
+            serial_txstring("\r\n");
+
         }
         else {
             serial_txstring("NONE\r\n");
         }
     }
     else if (wiz_read(SOCKET1_IR) & 0X08) { // check timeout bit
+        serial_txstring("timeoutrx\r\n");
         wiz_write(SOCKET1_COM, CLOSED); //close and reopen socket
-        wiz_write(SOCKET1_IR, 0x1f); // clear all interrupts
+        wiz_write(SOCKET1_IR, 0x08); // clear all interrupts
         tcp_open();
     }
 }
