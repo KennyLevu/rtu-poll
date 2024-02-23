@@ -8,6 +8,7 @@
 #ifdef USE_ASM
 void asm_8(uint8_t command) 
 {
+    command;
     __asm 
         mov A, dpl                      ; store command in accumulator
         mov r7, #0x00                   ; set counter r7 to 0
@@ -32,6 +33,7 @@ void asm_8(uint8_t command)
 
 void asm_16(uint16_t command) 
 {   
+    command;
     __asm 
         mov A, dph                      ; store high byte of command in accumulator
         mov r7, #0x00                   ; set counter r7 to 0

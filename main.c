@@ -178,7 +178,7 @@ bool addr_parse(uint8_t off) {
 void wiz_init(void) 
 {   
     wiz_write(MODE, 0x00);  // disable indirect bus and pppoe, disable ping block mode
-    wiz_write(IMR, 0xc3);   // disable sockets 3 and 2, PPPoE interrupts | enable ip conflict and desintation unreachable interrupts, 0 and 1
+    wiz_write(IMR, 0x03);   // disables all interrupts except for sockets 0, 1
     /* DO: LOOK AT THIS FOR CONNECTION DROPS*/
     wiz_write(RETRY_U, 0x07); // timeout periods 200ms
     wiz_write(RETRY_L, 0xd0); 
@@ -573,7 +573,7 @@ void setup(void)
     SCON = 0x50;    // Serial Mode 1 8 bit UART with timer1 baud rate
     TMOD = 0x20;    // timer 1 mode 2 8 bit auto reload | timer 0 mode 1 16 bit timer
     TH1 = 0xfd;     // Load value for 9600 baud --> UART Mode 1 means baud is determined by timer 1's overflow rate 
-    REN = HIGH;        // serial port initialization
+    REN = HIGH;        // serial port initialization receive enable
 
     #ifdef USE_INTERRUPTS
     EX0 = HIGH;      // Enable external interrupts on INT0; bit on IE register
@@ -597,8 +597,6 @@ void INT0_Routine(void) __interrupt(0) __using(0)
     serial_txstring("interrupt\n");
     if (server_state == UDP) {
         udp_rx();
-        // Clear s0_ir register by writing 1s
-        wiz_write(SOCKET0_IR, 0x1f);
     }
     else if (server_state == TCP) {
         tcp_rx();
