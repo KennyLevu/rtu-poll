@@ -23,7 +23,7 @@ void asm_8(uint8_t command)
     00002$:
                 setb     _P2_1          ; CLOCK HIGH LOW
                 clr      _P2_1
-                rl      A               ; rotate accumulator left 1
+                rlc      A               ; rotate accumulator left 1
         inc     r7                      ; increment counter r7
         sjmp    00003$                  ; jump to top of loop
     00005$:
