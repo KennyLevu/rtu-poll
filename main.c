@@ -406,6 +406,8 @@ void udp_rx(void)
         udp_rx_helper();
         RESPONSE = LOW;
         RX = HIGH;
+        // Clear s0_ir register by writing 1s
+        wiz_write(SOCKET0_IR, 0x1f);
     }
 }
 /* Initialize TCP Socket in Server Mode*/
@@ -556,6 +558,8 @@ void tcp_rx(void) {
         RESPONSE = LOW;
         RX = HIGH;
         // tcp_close_state();
+        // Clear s1_ir register by writing 1s
+        wiz_write(SOCKET1_IR, 0x1f);
 
     }
 }
@@ -582,6 +586,7 @@ void setup(void)
     TR1 = HIGH; // start timer
     RI = LOW; // clear transmit interupt
 }
+#ifdef USE_INTERRUPTS
 // external interrupt service routine for INT0 @ P3.2
 void INT0_Routine(void) __interrupt(0) __using(0)
 {   
@@ -590,31 +595,20 @@ void INT0_Routine(void) __interrupt(0) __using(0)
         udp_rx();
         // Clear s0_ir register by writing 1s
         wiz_write(SOCKET0_IR, 0x1f);
-        // clear general interrupt register
-        wiz_write(INTER_REG, 0xff);
     }
     else if (server_state == TCP) {
         tcp_rx();
         tcp_close_state();
-        // Clear s1_ir register by writing 1s
-        wiz_write(SOCKET1_IR, 0x1f);
-        // clear general interrupt register
-        wiz_write(INTER_REG, 0xff);
     }
     else {
         udp_rx();
         tcp_rx();
         tcp_close_state();
-        // Clear s1_ir register by writing 1s
-        wiz_write(SOCKET1_IR, 0x1f);
-        // Clear s0_ir register by writing 1s
-        wiz_write(SOCKET0_IR, 0x1f);
-        // clear general interrupt register
-        wiz_write(INTER_REG, 0xff);
-
     }
     return;
 }
+#else
+#endif
 
 void main(void)
 {
@@ -626,34 +620,20 @@ void main(void)
     uint8_t read;
     RESPONSE = LOW;
 	while (1) {
-        
+
         #ifdef USE_INTERRUPTS
         #else
             if (server_state == UDP) {
                 udp_rx();
-                // Clear s0_ir register by writing 1s
-                wiz_write(SOCKET0_IR, 0x1f);
-                // clear general interrupt register
-                wiz_write(INTER_REG, 0xff);
             }
             else if (server_state == TCP) {
                 tcp_rx();
                 tcp_close_state();
-                // Clear s1_ir register by writing 1s
-                wiz_write(SOCKET1_IR, 0x1f);
-                // clear general interrupt register
-                wiz_write(INTER_REG, 0xff);
             }
             else {
                 udp_rx();
                 tcp_rx();
                 tcp_close_state();
-                // Clear s1_ir register by writing 1s
-                wiz_write(SOCKET1_IR, 0x1f);
-                // Clear s0_ir register by writing 1s
-                wiz_write(SOCKET0_IR, 0x1f);
-                // clear general interrupt register
-                wiz_write(INTER_REG, 0xff);
             }
         #endif
         read = RX_data(); // get character from terminal

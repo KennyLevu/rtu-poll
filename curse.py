@@ -116,6 +116,7 @@ class Poll():
     # poll both udp and tcp sockets
     def poll_both(self, message, timeout=5):
         start_time = time.time()
+        end1 = 0
         # print(start_time)
         udp_response = None
         tcp_response = None
@@ -147,14 +148,17 @@ class Poll():
             # Handle UDP timeout
             self.errors += 1
             print("UDP timeout")
-            udp_response = "TIMEOUT"
+            end1 = time.time()
+            udp_response = ("TIMEOUT", end1 - start_time, message)
 
         if tcp_thread.is_alive():
             # Handle TCP timeout
             self.errors += 1
             print("TCP timeout")
-            tcp_response = "TIMEOUT"
-        end_time = time.time()
+            end2 = time.time()
+            tcp_response = ("TIMEOUT", end2 - start_time, message)
+
+        # end_time = time.time()
         # print(end_time)
         # print(end_time - start_time)
         # times = end_time - start_time
@@ -410,9 +414,9 @@ def main(stdscr):
             if mode == "UDP":
                 receive = poll.poll_udp(send, 1)
             elif mode == "TCP":
-                receive = poll.poll_tcp(send, 60)
+                receive = poll.poll_tcp(send, 3)
             elif mode == "BOTH":
-                receive_both = poll.poll_both(send, 60)
+                receive_both = poll.poll_both(send, 3)
         send_once = False
 
 wrapper(main)

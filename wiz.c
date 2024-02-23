@@ -1,55 +1,80 @@
 #include <8051.h>
 #include <stdint.h>
+#include <stdio.h>
 #include "periph.h"
 #include "constant.h"
 
 #define USE_ASM
 #ifdef USE_ASM
-void asmout_8(uint8_t command) 
+void asm_8(uint8_t command) 
 {
-    uint8_t i;
-    for (i = 0; i < 8; i++) {
-        asm volatile ( // tells compiler that the following is assembly code, volatile flags the code to prevent opimization 
-            "mov     r1, %[cmd]       \n"  // Move the command to a register
-            "\n"
-            "srl     r1, #7           \n"  // Shift the command to get the most significant bit
-            "jc      set_bit          \n"  // If carry flag is set, jump to set_bit label
-            "clr     P2.3             \n"  // Clear P2.3 if the MSB is 0
-            "sjmp    next_bit         \n"  // Jump to next_bit label
-            "set_bit:                 \n"  // Label to set P2.3 if MSB is 1
-            "setb    P2.3             \n"  // Set P2.3 if the MSB is 1
-            "next_bit:                \n"  // Label to proceed to the next bit
-            "setb    P2.1             \n"  // Set P2.1
-            "clr     P2.1             \n"  // Clear P2.1
-            : // No output 
-            : [cmd] "r" (command) // Input operand - command
-            : "r1", "cc" // clobber list - register r1 and condition codes
-        );
-        command = command << 1; // Shift the command to the left by one bit
+    __asm 
+        mov A, dpl
+    __endasm;
+    for (uint8_t i = 0; i < 8; i++) {
+            __asm
+                jb ACC.7, 00001$
+                clr     _P2_3
+                sjmp      00002$
+                00001$:
+                setb	_P2_3
+                00002$:
+                setb     _P2_1
+                clr      _P2_1
+                rl A
+            __endasm;
+        // command = command << 1;
     }
+    // for (uint8_t i = 0; i < 16; i++) {
+    //         if (command & 0x8000) {
+    //             P2_3 = 1;
+    //         }
+    //         else {
+    //             P2_3 = 0;
+    //         }
+    //         P2_1 = 1;
+    //         command = command << 1;
+    //         P2_1 = 0;
+    // }
+
 }
 
 void asm_16(uint16_t command) 
-{
-    uint8_t i;
-    for (i = 0; i < 16; i++) {
-        asm volatile ( 
-            "mov     r1, %[cmd]       \n" 
-            "srl     r1, #15          \n"
-            "jc      set_bit          \n"
-            "clr     P2.3             \n"
-            "sjmp    next_bit         \n"
-            "set_bit:                 \n"
-            "setb    P2.3             \n"
-            "next_bit:                \n"
-            "setb    P2.1             \n"
-            "clr     P2.1             \n"
-            :
-            : [cmd] "r" (command)
-            : "r1", "cc"
-        );
-        command = command << 1;
+{   
+    
+    for (uint8_t i = 0; i < 16; i++) {
+        // __asm
+        //     jb ACC.7, 00001$
+        //     clr     _P2_3
+        //     sjmp      00002$
+        //     00001$:
+        //     setb	_P2_3
+        //     00002$:
+        //     setb     _P2_1
+        //     clr      _P2_1
+        //     rl A
+        // __endasm;
+            if (command & 0x8000) {
+                P2_3 = 1;
+            }
+            else {
+                P2_3 = 0;
+            }
+            P2_1 = 1;
+            command = command << 1;
+            P2_1 = 0;
     }
+    // for (uint8_t i = 0; i < 16; i++) {
+    //         if (command & 0x8000) {
+    //             P2_3 = 1;
+    //         }
+    //         else {
+    //             P2_3 = 0;
+    //         }
+    //         P2_1 = 1;
+    //         command = command << 1;
+    //         P2_1 = 0;
+    // }
 }
 
 // OP Write Instruction

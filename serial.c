@@ -154,7 +154,7 @@ char *itoa(uint16_t i)
 
 unsigned char RX_data(void)
 {
-    if (RI == 1) {
+    if (RI == 1) { // received interrupt bit
         unsigned char a;
         RI = 0;
         a = SBUF;
