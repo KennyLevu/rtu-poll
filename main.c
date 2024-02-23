@@ -132,35 +132,36 @@ bool hex_parse(void) {
     return true;
 
 }
-// parse address syntax
+
+// parse address syntax for numerical addresses up to 255, up to 4 bytes
 bool addr_parse(uint8_t off) {
     uint8_t dots = 0;
-    for (uint8_t i = 0; i < serial_pt; i++) {
+    for (uint8_t i = 0; i < serial_pt; i++) { // count dots to validate syntax for 4 bytes
         if (serial_in[i] == '.') {
             dots++;
         }
     }
     if (dots != 3) {
-        return false;
+        return false; // return false if not enough dots
     }
     if (serial_in[off] == '.') {
-        return false;
+        return false; // edge case with dot after qualifier --> MAC=.
     }
-    char* ptr = strtok(serial_in+off, ".");
-    uint16_t octet = 0;
-    if (ptr == NULL) {
+    char* ptr = strtok(serial_in+off, "."); // tokenize address string by dots
+    uint16_t octet = 0; // initialize byte value
+    if (ptr == NULL) { // empty address string 
         return false;
     }
 
     dots = 0;
     do {
         octet = atoi(ptr);
-        if (octet > 0 && octet <= 255) {
-            addr[dots] = octet;
+        if (octet > 0 && octet <= 255) { // validate byte range
+            addr[dots] = octet; // store byte value at index 0-4
             dots++;
         }
         else if (octet == 0) {
-            addr[dots] = 0;
+            addr[dots] = 0; // edge case for ascii 0, store 0 at index 0-4
             dots++;
         }
         else {
@@ -168,7 +169,7 @@ bool addr_parse(uint8_t off) {
         }
 
     }
-    while (ptr = strtok(NULL, "."));
+    while (ptr = strtok(NULL, ".")); // end once all nums have been parsed
 
     return true;
 }
@@ -178,8 +179,9 @@ void wiz_init(void)
 {   
     wiz_write(MODE, 0x00);  // disable indirect bus and pppoe, disable ping block mode
     wiz_write(IMR, 0xc3);   // disable sockets 3 and 2, PPPoE interrupts | enable ip conflict and desintation unreachable interrupts, 0 and 1
+    /* DO: LOOK AT THIS FOR CONNECTION DROPS*/
     wiz_write(RETRY_U, 0x07); // timeout periods 200ms
-    wiz_write(RETRY_L, 0xd0);
+    wiz_write(RETRY_L, 0xd0); 
     wiz_write(RETRY_COUNT, 5);
 
     /* Config Initial Source Network Settings */
@@ -218,11 +220,12 @@ void wiz_init(void)
        Socket 1: TCP 5100 | 4KB RX/TX | Timeout ACK*/
     wiz_write(SOCKET0, 0x02); // set socket 0 to UDP with no multicast
     wiz_write(SOCKET1, 0x21); // set socket 1 to TCP without ack on internal timeout
+
     // wiz_write(SOCKET1, 0x01); // set socket 1 to TCP without ack on internal timeout
     /* Divide 8KB of RX memory and 8KB of TX memory over sockets 0 and 1
     Byte representation divided into 4 has 2 bits presenting each socket from greatest to least
     ex. 1100 0000 assigns all memory to socket 3 (11 for 8KB) */
-    wiz_write(RX_MEM_SIZE, 0xAA);  // assign 4kb to s0/s1 each  0000 1010 
+    wiz_write(RX_MEM_SIZE, 0xAA);  // assign 4kb to s0/s1 each  0000 1010  NOTE: Setting 4kb to all sockets (0XAA) will assign 4kb to s0/s1 first with s2/s3 being unusable
     wiz_write(TX_MEM_SIZE, 0xAA);   // assign 4kb to s0/s1 each 0000 1010
     /* Bind sockets to port numbers */
     wiz_write(SOCKET0_PORT_U, 0x13); // 5000 UDP Socket 0
