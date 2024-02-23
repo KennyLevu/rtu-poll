@@ -32,30 +32,56 @@ void asm_8(uint8_t command)
 
 void asm_16(uint16_t command) 
 {   
+    __asm 
+        mov A, dph                      ; store high byte of command in accumulator
+        mov r7, #0x00                   ; set counter r7 to 0
+    00006$:
+        cjne    r7, #0x08, 00007$       ; if r7 is not equal to 8, jump to label
+        sjmp    00010$                  ; jump to to high byte loop
+    00007$:
+                jb ACC.7, 00008$        ; if MSB in accumulator is set, jump to label
+                clr     _P2_3           ; set MOSI LOW if MSB is cleared 
+                sjmp      00009$        ; jump to clock label
+    00008$:
+                setb	_P2_3           ; set MOSI HIGH
+    00009$:
+                setb     _P2_1          ; CLOCK HIGH LOW
+                clr      _P2_1
+                rlc      A               ; rotate accumulator left 1
+        inc     r7                      ; increment counter r7
+        sjmp    00006$                  ; jump to top of loop
     
-    for (uint8_t i = 0; i < 16; i++) {
-        if (command & 0x8000) {
-            P2_3 = 1;
-        }
-        else {
-            P2_3 = 0;
-        }
-        P2_1 = 1;
-        command = command << 1;
-        P2_1 = 0;
-    }
+    00010$:
+        mov A, dpl                      ; store lower byte of command in accumulator
+        mov r7, #0x00                   ; reset counter r7
+    00011$:
+        cjne    r7, #0x08, 00012$       ; if r7 is not equal to 8, jump to label
+        sjmp    00015$                  ; jump to end of loop label
+    00012$:
+                jb ACC.7, 00013$        ; if MSB in accumulator is set, jump to label
+                clr     _P2_3           ; set MOSI LOW if MSB is cleared 
+                sjmp      00014$        ; jump to clock label
+    00013$:
+                setb	_P2_3           ; set MOSI HIGH
+    00014$:
+                setb     _P2_1          ; CLOCK HIGH LOW
+                clr      _P2_1
+                rlc      A               ; rotate accumulator left 1
+        inc     r7                      ; increment counter r7
+        sjmp    00011$                  ; jump to top of loop
+    00015$:
 
-
+    __endasm;
     // for (uint8_t i = 0; i < 16; i++) {
-    //         if (command & 0x8000) {
-    //             P2_3 = 1;
-    //         }
-    //         else {
-    //             P2_3 = 0;
-    //         }
-    //         P2_1 = 1;
-    //         command = command << 1;
-    //         P2_1 = 0;
+    //     if (command & 0x8000) {
+    //         P2_3 = 1;
+    //     }
+    //     else {
+    //         P2_3 = 0;
+    //     }
+    //     P2_1 = 1;
+    //     command = command << 1;
+    //     P2_1 = 0;
     // }
 }
 
