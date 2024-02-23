@@ -658,9 +658,9 @@ void main(void)
                 tcp_close_state();
             }
             else {
-                udp_rx();
                 tcp_rx();
                 tcp_close_state();
+                udp_rx();
             }
         #endif
         read = RX_data(); // get character from terminal
