@@ -422,7 +422,6 @@ void tcp_open(void)
         if (wiz_read(SOCKET1_STAT) != SOCK_INIT) {
             serial_txstring("z");
             wiz_write(SOCKET1_COM, CLOSED); // socket not initialized, retry
-            // serial_txstring("infinite\r\n\0");
             continue;
         } 
         wiz_write(SOCKET1_COM, LISTEN); // SET SOCKET TO SERVER MODE LISTEN
@@ -486,13 +485,13 @@ void tcp_tx(uint16_t data_size) {
     wiz_write(SOCKET1_TXWRU, (txwr >> 8) & 0xff);
     wiz_write(SOCKET1_TXWRL, txwr & 0xff);
     wiz_write(SOCKET1_COM, SEND);
-
-    // if (wiz_read(SOCKET1_COM == 0x00)) {
-    //     // serial_txstring("Send complete\r\n\0");
-    // } else if (wiz_read(SOCKET0_IR) & 0x08) {
-    //     // check timeout bit
-    //     // serial_txstring("\r\nSend failed\r\n\0");
-    // }
+    serial_txstring("Finished SEND\r\n");
+    if (wiz_read(SOCKET1_COM == 0x00)) {
+        serial_txstring("Send complete\r\n");
+    } else if (wiz_read(SOCKET0_IR) & 0x08) {
+        // check timeout bit
+        serial_txstring("\r\nSend failed\r\n");
+    }
     TX = HIGH;
 }
 void tcp_rx_helper(void) {
@@ -541,7 +540,7 @@ void tcp_rx_helper(void) {
     wiz_write(SOCKET1_COM, RECV);
     // // Clear s1_ir register by writing 1s
     // wiz_write(SOCKET1_IR, 0x1f);
-
+    serial_txstring("Finished receive\r\n");
     if (peer_data[0] == rtu[0]) {
         for (int i = 0; i < rx_size; i++) { // Convert to uppercase
             if (peer_data[i] >= 'a' && peer_data[i] <= 'z' ) {
@@ -555,16 +554,31 @@ void tcp_rx_helper(void) {
     free(peer_data);
 }
 void tcp_rx(void) {
-    if (wiz_read(SOCKET1_IR) & 0x04) {  // check for Recv interrupt (bit 2/100/x04)
-        RX = LOW;
-        RESPONSE = HIGH;
-        tcp_rx_helper();
-        RESPONSE = LOW;
-        RX = HIGH;
-        // tcp_close_state();
-        // Clear s1_ir register by writing 1s
-        wiz_write(SOCKET1_IR, 0x1f);
-
+    if (wiz_read(SOCKET1_IR) & 0x01 ) { // chck or connection established bit 
+        serial_txstring("CON_IR: ");
+        serial_txstring(itoa(wiz_read(SOCKET1_IR)));
+        serial_txstring("   REC_IR: ");
+        wiz_write(SOCKET1_IR, 0x01); // clear CONNECTION established bit
+        if (wiz_read(SOCKET1_IR) & 0x04) {  // check for Recv interrupt (bit 2/100/x04)
+            serial_txstring(itoa(wiz_read(SOCKET1_IR)));
+            serial_txstring("\r\n");
+            RX = LOW;
+            RESPONSE = HIGH;
+            tcp_rx_helper();
+            RESPONSE = LOW;
+            RX = HIGH;
+            // tcp_close_state();
+            // Clear s1_ir register by writing 1s
+            wiz_write(SOCKET1_IR, 0x1f);
+        }
+        else {
+            serial_txstring("NONE\r\n");
+        }
+    }
+    else if (wiz_read(SOCKET1_IR) & 0X08) { // check timeout bit
+        wiz_write(SOCKET1_COM, CLOSED); //close and reopen socket
+        wiz_write(SOCKET1_IR, 0x1f); // clear all interrupts
+        tcp_open();
     }
 }
 
