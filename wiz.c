@@ -72,17 +72,6 @@ void asm_16(uint16_t command)
     00015$:
 
     __endasm;
-    // for (uint8_t i = 0; i < 16; i++) {
-    //     if (command & 0x8000) {
-    //         P2_3 = 1;
-    //     }
-    //     else {
-    //         P2_3 = 0;
-    //     }
-    //     P2_1 = 1;
-    //     command = command << 1;
-    //     P2_1 = 0;
-    // }
 }
 
 // OP Write Instruction
