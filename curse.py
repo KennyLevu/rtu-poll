@@ -73,6 +73,7 @@ class Poll():
         # Record timestamp for response time
         start_time = time.time()
         try:
+            #todo add timeout to tcp sock
             # Create a TCP socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)    
             # Attempt to connect

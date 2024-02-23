@@ -9,61 +9,43 @@
 void asm_8(uint8_t command) 
 {
     __asm 
-        mov A, dpl
-    __endasm;
-    for (uint8_t i = 0; i < 8; i++) {
-            __asm
-                jb ACC.7, 00001$
-                clr     _P2_3
-                sjmp      00002$
-                00001$:
-                setb	_P2_3
-                00002$:
-                setb     _P2_1
+        mov A, dpl                      ; store command in accumulator
+        mov r7, #0x00                   ; set counter r7 to 0
+    00003$:
+        cjne    r7, #0x08, 00004$       ; if r7 is not equal to 8, jump to label
+        sjmp    00005$                  ; jump to end of loop label
+    00004$:
+                jb ACC.7, 00001$        ; if MSB in accumulator is set, jump to label
+                clr     _P2_3           ; set MOSI LOW if MSB is cleared 
+                sjmp      00002$        ; jump to clock label
+    00001$:
+                setb	_P2_3           ; set MOSI HIGH
+    00002$:
+                setb     _P2_1          ; CLOCK HIGH LOW
                 clr      _P2_1
-                rl A
-            __endasm;
-        // command = command << 1;
-    }
-    // for (uint8_t i = 0; i < 16; i++) {
-    //         if (command & 0x8000) {
-    //             P2_3 = 1;
-    //         }
-    //         else {
-    //             P2_3 = 0;
-    //         }
-    //         P2_1 = 1;
-    //         command = command << 1;
-    //         P2_1 = 0;
-    // }
-
+                rl      A               ; rotate accumulator left 1
+        inc     r7                      ; increment counter r7
+        sjmp    00003$                  ; jump to top of loop
+    00005$:
+    __endasm;
 }
 
 void asm_16(uint16_t command) 
 {   
     
     for (uint8_t i = 0; i < 16; i++) {
-        // __asm
-        //     jb ACC.7, 00001$
-        //     clr     _P2_3
-        //     sjmp      00002$
-        //     00001$:
-        //     setb	_P2_3
-        //     00002$:
-        //     setb     _P2_1
-        //     clr      _P2_1
-        //     rl A
-        // __endasm;
-            if (command & 0x8000) {
-                P2_3 = 1;
-            }
-            else {
-                P2_3 = 0;
-            }
-            P2_1 = 1;
-            command = command << 1;
-            P2_1 = 0;
+        if (command & 0x8000) {
+            P2_3 = 1;
+        }
+        else {
+            P2_3 = 0;
+        }
+        P2_1 = 1;
+        command = command << 1;
+        P2_1 = 0;
     }
+
+
     // for (uint8_t i = 0; i < 16; i++) {
     //         if (command & 0x8000) {
     //             P2_3 = 1;
