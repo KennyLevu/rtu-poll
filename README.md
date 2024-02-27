@@ -1,4 +1,6 @@
 Resource: https://wiki.laptop.org/go/SDCC#Compiling_a_program
+w5100 datashet: https://www.sparkfun.com/datasheets/DevTools/Arduino/W5100_Datasheet_v1_1_6.pdf
+
 
 This project emulates a remote telemetery unit acting as a server that responds to poll requests from master controllers. The project was built with an STC89 microcontroller interfacing with a Wiznet5100 over a serial port interface. Running the curse.py script will launch a curses interface which emulates an MCU polling for the periphal Wiznet board (the rtu).
 
